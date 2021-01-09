@@ -1,0 +1,132 @@
+
+.nav-link:hover,.nav_a1{
+	color:#ff4466;
+	border-bottom:3px solid #ff4466;
+	
+}
+/* nav{width:100%;height:46px;
+	background: #fff;	
+	clear:both;
+
+}	
+nav div{width:1100px;
+	height:46px;
+	margin:0 auto;
+}
+nav a{
+	font-size:18px;
+	float:left;
+	width:106px;height:43px;
+				line-height:50px;
+	text-align:center;
+	}
+	#nav_a{
+	margin-left:-70px;}
+#nav_a~a:hover,#nav_a{
+	color:#ff4466;
+	border-bottom:3px solid #ff4466;
+	
+}
+#nav_a1{
+	color:#ff6699 ;
+	font-size:15px;
+	float:right;
+	
+}
+#nav_a1 img{margin:-8px 0px;
+	
+}
+nav #nav_a1:hover{border:none;}
+header:after{
+	content:'';
+	display: block;
+	clear:both;
+} */
+
+			
+		.nav2{
+			background-color:#fff;
+			width:1220px;
+			height:500px;
+			margin: 15px auto;
+			position:relative;
+	
+		}
+		.nav2_left{float:left;
+			border: 1px solid #000;
+			position:absolute;
+			width:400px;
+			height:100%;
+
+			}
+
+
+		.nav2 a{
+			color: #999;}
+
+		.hidden1 div{display: none;}
+		.hidden1:hover div{display:block;
+			width:340px;
+			height:90px;
+
+		}
+		.carousel{position: absolute;
+			right:0px;
+		}
+		.carousel img{
+			width:830px !important;height:500px;}
+		.carousel-control-prev,
+		.carousel-control-next{
+			width:4%;height:20%;
+			border-radius:0.25rem;
+			top:40%;
+		}
+		.carousel-indicators li{
+			width:10px;height:10px;
+			background-color: #fff;
+			margin-left: 0.4rem;
+			margin-right: 0.4rem;
+			border-radius: 50%;
+
+		}
+		.carousel-indicators .active{
+			background-color: #0aa1ed;
+		}
+		.host_sale,.col_f,.col_m,.han_ele,.han_ornaments,.hot_brand{
+			display:flex;
+			width:1220px;
+			height:813px;
+			margin:0px auto;
+			flex-wrap:wrap;
+		   justify-content:space-between;
+		}
+		.sale_title{
+			text-align: center;
+			font-size: 28px;
+			font-weight: lighter;
+			color: #8b8b8b;
+		}
+		.host_sale>div,.col_f>div,.col_m>div,.han_ele>div,.han_ornaments>div{
+		width:248px;
+		height:370px;
+		
+		
+		}
+		.host_sale>div>p,.col_f>div>p,.col_m>div>p,.han_ele>div>p,.han_ornaments>div>p{
+		margin: 10px 10px 0 10px;
+		color: #ff4466;
+		font-size: 34px;
+		font-weight: 100;
+
+	}
+	.host_sale>div>p>i,.col_f>div>p>i,.col_m>div>p>i,.han_ele>div>p>i,.han_ornaments>div>p>i{	font-size: 18px;}
+
+	a:hover{
+		text-decoration:none;
+	}
+
+.img_position:hover{
+	transition: all 1s;
+	transform: scale(1.1);
+}
+

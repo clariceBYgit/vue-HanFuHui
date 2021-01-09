@@ -1,0 +1,3578 @@
+﻿var xh = {};
+xh.huiuid = 137;
+xh.apihost = isbate() ? "http://bate.hanfuhui.cn:85" : "https://api5.hanfugou.com";
+xh.publichost = isbate() ? "http://bate.hanfuhui.cn:89" : "https://public.hanfugou.com";
+xh.statichost = "https://static.hanfugou.com";
+xh.pichost = "https://pic.hanfugou.com";
+xh.huihost = isbate() ? "http://bate.hanfuhui.cn" : "http://www.hanfuhui.cn";
+xh.gouhost = isbate() ? "http://bate.hanfuhui.cn:82" : "http://www.hanfugou.com";
+xh.mobilehost = isbate() ? "http://bate.hanfuhui.cn:84" : "https://m.hanfugou.com";
+xh.imhost = "http://im.hanfugou.com";
+xh.baichuan = "http://baichuan.hanfugou.com";
+xh.taobao = "https://item.taobao.com/item.htm?id=";
+xh.loginhost = xh.publichost + "/Account/Login";
+xh.loginouthost = xh.publichost + "/Account/LoginOut";
+xh.loginredirect = "/Home/Redirect";
+xh.defimg = xh.pichost + "/img/upload_defimg.jpg";
+xh.token_key = "xh_token";
+xh.user_key = "xh_user";
+xh.user_info = "xh_user_info";
+xh.loginover = "11008";  //登录过期标识
+xh.nodata = '<p class="data_null">查询为空</p>';
+xh.nodata_tb = '<tr><td colspan="100">' + xh.nodata + '</td></tr>';
+/**
+   * 在Safari和IE8上执行 new Date('2017-12-8 11:36:45'); 会得到Invalid Date
+   * 本函数重写默认的Date函数，以解决其在Safari，IE8上的bug
+   */
+//if (isiOS()) {
+//    Date = function (Date) {
+//        MyDate.prototype = Date.prototype;
+//        return MyDate;
+
+//        function MyDate() {
+//            // 当只有一个参数并且参数类型是字符串时，把字符串中的-替换为/
+//            if (arguments.length === 1) {
+//                var arg = arguments[0];
+//                if (Object.prototype.toString.call(arg) === '[object String]') {
+//                    arguments[0] = arg.replace(/-/g, "/");
+//                    // console.log(arguments[0]);
+//                }
+//            }
+//            var bind = Function.bind;
+//            var unbind = bind.bind(bind);
+//            return new (unbind(Date, null).apply(null, arguments));
+//        }
+//    }(Date);
+//}
+
+//公共全局自定义函数
+(function ($) {
+    $.fn.extend({
+        //设置元素颜色
+        color: function (value) {
+            if (value == undefined) {
+                return this.css("color");
+            } else {
+                return this.css("color", value);
+            }
+        },
+        //设置元素背景颜色
+        backgroundcolor: function (value) {
+            if (value == undefined) {
+                return this.css("background-color");
+            } else {
+                return this.css("background-color", value);
+            }
+        },
+        //去除前面空格
+        trimStart: function (text) {
+            return (text || "").replace(/^s+/g, "");
+        },
+        //去掉后面空格
+        trimEnd: function (text) {
+            return (text || "").replace(/s+$/g, "");
+        },
+        //设置图片
+        src: function (value) {
+            if (value == undefined) {
+                return this.attr("src");
+            } else {
+                return this.attr("src", value);
+            }
+        },
+        //给radio赋值，传rad的父级div
+        radioval: function (value) {
+            if (value == undefined) {
+                return $(this).find("[type=radio]:checked").val();
+            }
+            else {
+                return $(this).find("[type=radio][value=" + value + "]").attr("checked", true);
+            }
+        },
+    });
+})(jQuery);
+
+//自定义全局函数（xh命名空间下）
+(function ($) {
+    $.extend(xh, {
+        open: function (url, name, width, height) {
+            //获得窗口的垂直位置 
+            var iTop = (window.screen.availHeight - 30 - height) / 2;
+            //获得窗口的水平位置 
+            var iLeft = (window.screen.availWidth - 10 - width) / 2;
+            window.open(url, name, "height=" + height + ", width=" + width + ",top=" + iTop + ",left=" + iLeft + ",status=no,toolbar=no,menubar=no,location=no,resizable=no,scrollbars=0,titlebar=no");
+        },
+        //获取token
+        gettoken: function (callback) {
+            var token = "";
+            if ($(".hd_token").length > 0 && !strisnull($(".hd_token").val())) {
+                token = $(".hd_token").val();
+                return token;
+            }
+            if (callback != null && $.isFunction(callback))
+                callback(token);
+
+            //if (!strisnull(token)) {
+            //    $.ajax({
+            //        type: "get",
+            //        async: true,
+            //        url: "/Home/GetToken",
+            //        success: function (token) {
+            //            if (callback != null && $.isFunction(callback))
+            //                callback(token);
+            //        }
+            //    });
+            //}
+            //$.get("/Home/GetToken", null, function (token) {
+            //    if (callback != null && $.isFunction(callback))
+            //        callback(token);
+            //});
+        },
+        //注销
+        loginout: function (callback) {
+            location.href = "/Home/RemoveLogin";
+        },
+        //保存token
+        savetoken: function (token, callback) {
+            $.get("/Home/SaveToken", { "token": token }, function () {
+                if (callback != null && $.isFunction(callback))
+                    callback();
+            });
+        },
+        //记住外部网站传过来的token，并检测是否登录，未登录则跳转到登录页
+        checklogin: function (callback) {
+            var token = getQueryString("token");
+            if (!strisnull(token)) {
+                xh.savetoken(token);
+                callback();
+            } else {
+                xh.gettoken(function (token) {
+                    if (strisnull(token)) {
+                        location.href = xh.loginredirect;
+                    } else {
+                        callback();
+                    }
+                });
+            }
+        },
+        //检测后台管理员是否登录，不是则注销登录并跳转到登录页
+        //checkadmin: function (callback) {
+        //    xh.checklogin(function () {
+        //        xh.getsync("Admin/GetAdminForToken", null, function (data) {
+        //            if (data == null) {
+        //                xh.alert("当前账号不是管理员账号", function () {
+        //                    xh.loginout();
+        //                });
+        //            } else {
+        //                if (callback != null && $.isFunction(callback))
+        //                    callback(data);
+        //            }
+        //        });
+        //    });
+        //},
+        ////检测是否商家登录，不是则跳转到首页
+        checkshop: function (callback) {
+            xh.checklogin(function () {
+                xh.get("Shop/GetShopForLogin", null, function (data) {
+                    if (data == null) {
+                        xh.alert("当前账号不是店铺账号", function () {
+                            location.href = "/";
+                        });
+                    } else {
+                        if (callback != null && $.isFunction(callback))
+                            callback(data);
+                    }
+                }, null, true);
+            });
+        }
+    });
+})(jQuery);
+
+//dialog消息框与loading弹窗
+(function ($) {
+    $.extend(xh, {
+        form: function (title, content, cancel_callback) {
+            if (isMobile())
+                new DialogMobile().build("form", null, content);
+            else
+                new Dialog().build("form", null, cancel_callback, title, content);
+        },
+        iframe: function (title, url, width, height) {
+            var html = '<iframe src="' + url + '" width="' + width + '" height="' + height + '" style="border:none;"></iframe>';
+            new Dialog().build("form", null, null, title, html);
+        },
+        //弹出窗，一段时间后自动消失
+        dialog: function (content, callback) {
+            if (isMobile())
+                new DialogMobile().build("dialog", callback, content);
+            else
+                new Dialog().build("dialog", callback, null, null, content);
+        },
+        //弹出窗，只有确认按钮
+        alert: function (content, callback) {
+            if (isMobile())
+                new DialogMobile().build("alert", callback, content);
+            else
+                new Dialog().build("alert", callback, null, "消息提醒", content);
+        },
+        //弹出窗，有确认和取消按钮
+        confirm: function (content, callback, cancel_callback) {
+            if (isMobile())
+                new DialogMobile().build("confirm", callback, content);
+            else
+                new Dialog().build("confirm", callback, cancel_callback, "请确认", content);
+        },
+        //显示控件消息窗，显示在控件上的
+        messshow: function (dom, content) {
+            //去掉原有的
+            xh.messhide(dom);
+
+            var top = $(dom).offset().top;
+            var height = $(dom).height();
+            var left = $(dom).offset().left;
+
+            $(dom).addClass("c_mess_dom");
+
+            //如果控件是table 里的tr，在tr后面添加一行作为提示语
+            if ($(dom)[0].tagName == "TR") {
+                $(dom).after('<tr class="c_mess tb"><td colspan="1000"><span>' + content + '</span></td></tr>');
+            }
+            else {
+                $("body").append('<span class="c_mess" style="top:' + (top + height + 20) + 'px;left:' + left + 'px">' + content + '</span>');
+            }
+
+            //判断当前控件是否在窗体内，如果不是，则滚动到当前位置
+            var win_height = $(window).height();
+            var win_scrolltop = $(window).scrollTop();
+            if (top <= win_scrolltop || top >= win_scrolltop + win_height) {
+                $(window).scrollTop(top - 100);
+            }
+            //控件获得焦点后，警告提示消失
+            $(document).on("focus", dom, function () {
+                xh.messhide(dom);
+            });
+        },
+        //删除控件消息窗，如果dom为null，则整个页面的都删除
+        messhide: function (dom) {
+            if (dom != null) {
+                $(dom).removeClass("c_mess_dom");
+                if ($(dom)[0].tagName == "TR") {
+                    xh.remove($(dom).next(".c_mess"));
+                } else {
+                    xh.remove($(".c_mess"));
+                }
+            } else {
+                xh.remove($(".c_mess"));
+                $(".c_mess_dom").removeClass("c_mess_dom");
+            }
+        },
+        closeform: function () {
+            if (isMobile())
+                new DialogMobile().build("close", null, null);
+            else
+                new Dialog().build("close", null, null, null, null);
+        },
+        bigpic: function (img, nosuo) {
+            xh.form('查看大图', '<img src="' + img + (nosuo ? '' : '_700x.jpg') + '" />');
+        },
+        //loading图标
+        loadshow: function () {
+            if (isMobile()) {
+                if ($(".form_loading").length > 0) return;
+                $("body").append('<div class="form_loading"><i></i></div><div class="form_loading_bg"></div>');
+            } else {
+                if ($(".xh_loading").length > 0) return;
+                $(document.body).append('<div class="fixed_bg xh_loading anim_fadein anim_tool"><div class= "xh_loading_info"><i class="anim_rotate anim_tool"></i></div></div >');
+            }
+            $("html").css("overflow", "hidden");
+        },
+        loadhide: function () {
+            if (isMobile()) {
+                $(".form_loading").remove();
+                $(".form_loading_bg").remove();
+            } else {
+                if ($(".xh_loading").length == 0) return;
+                $(".xh_loading").removeClass("anim_fadein").addClass("anim_fadeout");
+                setTimeout(function () {
+                    $(".xh_loading").remove();
+                }, 300);
+            }
+            $("html").css("overflow", "visible");
+        }
+    });
+    var Dialog = function () {
+        var render = {
+            template: '<div class="fixed_bg dialog"><div class="dialog_box"><div class="dialog_top"></div><div class="dialog_info"></div></div></div>',
+            templateClose: '<i class="dialog_close t_3s js_cancel"></i>',
+            templateBtn1: '<div class="dialog_btn"><button class="btn_red js_sure">确定</button>',
+            templateBtn2: '<button class="btn_gray js_cancel">取消</button></div>',
+            renderDialog: function (type, callback, cancel_callback, title, content) {
+                var this_0 = this;
+                if (type == "close") {
+                    $(".js_cancel").click();
+                } else {
+                    var el = $(this_0.template);
+                    el.hide();
+                    el.addClass("dialog_" + type);
+                    el.find(".dialog_top").html(title);
+                    el.find('.dialog_info').html(content);
+                    if (type == "dialog") {
+                        $(".dialog_form").remove();
+                        el.find(".dialog_top").remove();
+                        el.find(".dialog_box").addClass("dialog_2");
+                        el.find(".dialog_box").closest(".dialog").removeClass("fixed_bg");
+                    }
+                    else if (type == "form") {
+                        $(".dialog_form").remove();
+                        el.find('.dialog_info').after(this_0.templateClose);
+                    }
+                    else if (type == "alert") {
+                        $(".dialog_alert").remove();
+                        el.find('.dialog_info').after(this_0.templateBtn1);
+                    }
+                    else if (type == "confirm") {
+                        $(".dialog_confirm").remove();
+                        el.find('.dialog_info').after(this_0.templateBtn1 + this_0.templateBtn2);
+                    }
+                    this_0.showDialog(el, type);
+
+                    //如果有图片，则等图片加载完成后再定位
+                    if (el.find('.dialog_info').find('img').length > 0) {
+                        var winwidth = $(window).width();
+                        el.find('.dialog_info').find('img').css({ "max-width": winwidth * 0.8 - 40 });
+                        xh.loadshow();
+                        el.find('.dialog_info').find('img').load(function () {
+                            el.show();
+                            this_0.setPosition(el.find(".dialog_box"));
+                            xh.loadhide();
+                        });
+                    } else {
+                        el.show();
+                        this_0.setPosition(el.find(".dialog_box"));
+                    }
+
+                    this_0.bindEvents(el, type, callback, cancel_callback);
+                    $(".js_sure").focus();
+                }
+            },
+            /*
+             * 定位
+             */
+            setPosition: function (el) {
+                var width = el.width(),
+                    height = el.height();
+                el.css({
+                    "margin-top": -(height / 2 + 16),
+                    "margin-left": -(width / 2 + 16),
+                });
+                el.find('.dialog_info').css({
+                    "max-height": height - el.find(".dialog_top").height() - 40
+                });
+            },
+            /*
+             * 动画效果显示
+             */
+            showDialog: function (el, type) {
+                $(document.body).append(el);
+                if (type != "dialog") {
+                    $("html").css("overflow", "hidden");
+                }
+                el.find(".dialog_box").addClass("bounceIn");
+            },
+            closeDialog: function (el) {
+                if (el == null) return;
+
+                el.find(".dialog_box").removeClass("bounceIn").addClass("bounceOut");
+                setTimeout(function () {
+                    el.remove();
+                    $("html").css("overflow", "visible");
+                }, 200);
+            },
+            /*
+             * 绑定确定和取消事件
+             */
+            bindEvents: function (el, type, callback, cancenl_callback) {
+                var this_0 = this;
+                if (type == "dialog") {
+                    var time = el.find(".dialog_info").html().length / 4 * 1000; //根据提示文字的长度来决定显示时间
+                    if (time > 3000) {
+                        time = 3000;
+                    }
+                    if (time < 1000) {
+                        time = 1000;
+                    }
+                    this_0.time_ooooo = setTimeout(function () {
+                        this_0.closeDialog(el);
+                        setTimeout(function () {
+                            if (callback != null && $.isFunction(callback)) {
+                                callback();
+                            }
+                        }, 300);
+                    }, time);
+                }
+                el.find(".js_cancel").click(function () {
+                    this_0.closeDialog(el);
+                    if (cancenl_callback != null && $.isFunction(cancenl_callback)) {
+                        cancenl_callback();
+                    }
+                });
+                el.find(".js_sure").click(function () {
+                    if (callback != null && $.isFunction(callback)) {
+                        if (callback() != true) {
+                            this_0.closeDialog(el);
+                        }
+                    } else {
+                        this_0.closeDialog(el);
+                    }
+                });
+            }
+        }
+        return {
+            build: function (type, callback, cancel_callback, title, content) {
+                render.renderDialog(type, callback, cancel_callback, title, content);
+            }
+        }
+    }
+    var DialogMobile = function () {
+        var render = {
+            time_ooooo: null,
+            templateAlert: '<div id="showAlert" class="ms_alert"><div class="bg"></div><p class="alertHtml"></p></div>',
+            templateConfirm: '<div id="showAlert" class="ms_confirm"><p class="alertHtml"></p><div class="button"></p></div>',
+            templateForm: '<div id="showAlert" class="ms_confirm"><p class="alertHtml"></p></div>',
+            templateBtnCancel: '<a><div class="inset font_gray js_cancel">取消</div></a>',
+            templateBtnSure: '<a class="font_red js_sure">确定</a>',
+            bg_box: '<div class="showAlert_bg"></div>',
+            renderDialog: function (type, callback, content) {
+                var this_0 = this;
+                var el = null;
+                var bg = null;
+                if (type == "dialog") {
+                    el = $(this_0.templateAlert);
+                } else if (type == "confirm") {
+                    el = $(this_0.templateConfirm);
+                    el.find(".button").html(this_0.templateBtnCancel);
+                    el.find(".button").append(this_0.templateBtnSure);
+                    bg = $(this_0.bg_box);
+                } else if (type == "alert") {
+                    el = $(this_0.templateConfirm);
+                    el.find(".button").html(this_0.templateBtnSure);
+                    el.find(".js_sure").css("width", "100%");
+                    bg = $(this_0.bg_box);
+                } else if (type == "form") {
+                    el = $(this_0.templateForm);
+                    bg = $(this_0.bg_box);
+                    bg.click(function () {
+                        xh.closeform();
+                    });
+                } else if (type == "close") {
+                    this_0.closeDialog($("#showAlert"), $(".showAlert_bg"));
+                    return;
+                }
+                el.find('.alertHtml').html(content);
+                el.hide();
+
+                $("#showAlert").remove();
+                $(".showAlert_bg").remove();
+                if (this_0.time_ooooo != null) {
+                    clearTimeout(this_0.time_ooooo);
+                }
+                this_0.showDialog(el, bg);
+                el.show();
+                if (bg != null) {
+                    bg.show();
+                }
+                this_0.setPosition(el);
+                this_0.bindEvents(type, el, bg, callback);
+            },
+            /*
+             * 定位
+             */
+            setPosition: function (el) {
+                var width = el.width(),
+                    height = el.height(),
+                    pageSize = this.getPageSize();
+                el.css({
+                    top: (pageSize.h - height) / 2
+                });
+            },
+            /** 
+            * 获取页面尺寸 
+            */
+            getPageSize: function () {
+                return {
+                    w: document.documentElement.clientWidth,
+                    h: document.documentElement.clientHeight
+                }
+            },
+            /*
+             * 动画效果显示
+             */
+            showDialog: function (el, bg) {
+                $(document.body).append(el);
+                $(document.body).append(bg);
+                $("html").css("overflow", "hidden");
+                el.addClass("bounceIn");
+            },
+            closeDialog: function (el, bg) {
+                if (el == null) return;
+
+                if (bg != null) {
+                    bg.remove();
+                }
+                el.removeClass("bounceIn").addClass("bounceOut");
+                setTimeout(function () {
+                    el.remove();
+                    $("html").css("overflow", "visible");
+                }, 300);
+            },
+            /*
+             * 绑定确定和取消事件
+             */
+            bindEvents: function (type, el, bg, callback) {
+                var this_0 = this;
+                if (type == "dialog") {
+                    var time = el.find(".alertHtml").html().length / 4 * 1000; //根据提示文字的长度来决定显示时间
+                    if (time > 3000) {
+                        time = 3000;
+                    }
+                    if (time < 1000) {
+                        time = 1000;
+                    }
+
+                    this_0.time_ooooo = setTimeout(function () {
+                        this_0.closeDialog(el);
+                        setTimeout(function () {
+                            if (callback != null && $.isFunction(callback)) {
+                                callback();
+                            }
+                        }, 300);
+                    }, time);
+                } else if (type == "confirm" || type == "alert") {
+                    el.find(".js_sure").click(function () {
+                        if (callback != null && $.isFunction(callback)) {
+                            callback();
+                        }
+                        this_0.closeDialog(el, bg);
+                    });
+                    el.find(".js_cancel").click(function () {
+                        this_0.closeDialog(el, bg);
+                    });
+                }
+            }
+        }
+        return {
+            build: function (type, callback, content) {
+                render.renderDialog(type, callback, content);
+            }
+        }
+    }
+})(jQuery);
+
+//http请求
+(function ($) {
+    $.extend(xh, {
+        post: function (url, data, callback, errorcallback, haveload) {
+            if (haveload == null) haveload = true;
+            new Ajax().build("post", true, url, data, callback, errorcallback, haveload);
+        },
+        get: function (url, data, callback, errorcallback, haveload) {
+            if (haveload == null) haveload = false;
+            new Ajax().build("get", true, url, data, callback, errorcallback, haveload);
+        },
+        //同步get请求
+        getsync: function (url, data, callback, errorcallback) {
+            new Ajax().build("get", false, url, data, callback, errorcallback, false);
+        },
+        //图片上传
+        upload: function (options) {
+            var setting = $.extend({
+                isone: true,
+                btndom: ".btn_file",
+                btnispic: false,  //上传按钮直接显示图片
+                OnBegin: null,
+                OnProgressOne: null,
+                OnSuccessOne: null,
+                OnSuccess: null,
+            }, options);
+            new Upload().build(setting);
+        },
+        uploadvideo: function (options) {
+            var setting = $.extend({
+                maxsize: 500 * 1024 * 1024,
+                btndom: ".btn_file",
+                OnBegin: null,
+                OnProgress: null,
+                OnSuccess: null,
+            }, options);
+            new UploadVideo().build(setting);
+        }
+    });
+
+    var Ajax = function () {
+        return {
+            build: function (type, async, url, data, callback, errorcallback, haveload) {
+                if (url.indexOf('http') == -1) {
+                    url = xh.apihost + "/" + url;
+                }
+                if (haveload) {
+                    xh.loadshow();
+                }
+                var token = xh.gettoken();
+                //开始ajax请求
+                $.ajax({
+                    type: type,
+                    async: async,
+                    url: url,
+                    dataType: "json",
+                    ContentType: "application/json",
+                    beforeSend: function (request) {
+                        request.setRequestHeader("hanfuhui_token", token);
+                        request.setRequestHeader("hanfuhui_fromclient", isMobile() ? "h5" : "PC");
+                    },
+                    data: data,
+                    success: function (result) {
+                        if (result.Status == "10000") {
+                            if (haveload) {
+                                xh.loadhide();
+                            }
+                            if (callback && $.isFunction(callback)) {
+                                callback(result.Data, result.Remark, result.ServerTime);
+                            }
+                        } else if (result.Status == "11008") {
+                            //token过期
+                            if (ismini()) {
+                                wx.miniProgram.navigateTo({
+                                    url: '/pages/login/login?url=' + encodeURIComponent(location.href)
+                                });
+                            } else {
+                                xh.loginout();
+                            }
+                        } else if (result.Status == "20014") {
+                            xh.alert(result.ErrorMessage, function () {
+                                xh.loginout();
+                            });
+                        } else {
+                            xh.loadhide();
+                            xh.alert(result.ErrorMessage);
+                            if (errorcallback != null && $.isFunction(errorcallback)) {
+                                errorcallback(result);
+                            }
+                        }
+                    },
+                    error: function (error) {
+                        //xh.alert("请求错误：" + error.statusText + "|接口" + url);
+                        xh.loadhide();
+                        if (errorcallback != null && $.isFunction(errorcallback)) {
+                            errorcallback(error);
+                        }
+                    }
+                });
+            }
+        }
+    }
+    var Upload = function () {
+        var render = {
+            //上传按钮原文本内容
+            btndomtext: "",
+            //当前选择的图片列表下标
+            fileindex: 0,
+            //当前选择的图片数量
+            filecount: 0,
+            //所有上传的图片列表下标，用于生成唯一id
+            uploadindex: 0,
+            //ajax请求进度条
+            xhrOnProgress: function (fun) {
+                var this_0 = this;
+
+                this_0.xhrOnProgress.onprogress = fun;
+                return function () {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (typeof this_0.xhrOnProgress.onprogress !== 'function') {
+                        return xhr;
+                    }
+                    if (this_0.xhrOnProgress.onprogress && xhr.upload) {
+                        xhr.upload.onprogress = this_0.xhrOnProgress.onprogress;
+                    }
+                    return xhr;
+                }
+            },
+            //上传单张图片基方法
+            uploadUpyunBase: function (btndom, filedoms, oneProgressCallback, oneSuccessCallback, successCallback) {
+                var this_0 = this;
+                var filedom = filedoms[this_0.fileindex];
+                xh.get("Upload/GetUpyunAuthention", { "filesize": filedom.file.size, "filetype": filedom.file.type }, function (result) {
+                    var formData = new FormData();
+                    formData.append("policy", result.policy);
+                    formData.append("authorization", result.authorization);
+                    formData.append("file", filedom.file);
+
+                    var pichost = result.pichost;
+                    $.ajax({
+                        url: result.url,
+                        type: "POST",
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        xhr: this_0.xhrOnProgress(function (e) {
+                            var percent = Math.round(e.loaded * 100 / e.total);
+                            if (oneProgressCallback != null && $.isFunction(oneProgressCallback)) {
+                                oneProgressCallback(filedom.id, percent, btndom);
+                            }
+                        }),
+                        success: function (data, textStatus, xhr) {
+                            data = data.replace(new RegExp("-", "g"), "_");
+                            var msg2 = JSON.parse(data);
+
+                            msg2.url = pichost + msg2.url;
+                            if (oneSuccessCallback != null && $.isFunction(oneSuccessCallback)) {
+                                oneSuccessCallback(filedom.id, msg2, btndom, filedom.file);
+                            }
+                            this_0.fileindex++;
+                            if (this_0.fileindex < this_0.filecount) {
+                                this_0.uploadUpyunBase(btndom, filedoms, oneProgressCallback, oneSuccessCallback, successCallback);
+                            } else {
+                                if (successCallback != null && $.isFunction(successCallback))
+                                    successCallback();
+                            }
+                        },
+                        error: function (error) {
+                            console.log(error.statusText);
+                            btnopen($(btndom), btndomtext);
+                        }
+                    });
+                }, null, false);
+            },
+            //上传入口方法
+            uploadUpyun: function (setting) {
+                var this_0 = this;
+
+                //生成file控件并触发
+                var fileid = 'xh_file_' + setting.btndom.replace('.', '').replace('#', '');
+                $("#" + fileid).remove();
+                $(document.body).append('<input type="file" id="' + fileid + '" accept="image/gif,image/jpeg,image/png" style="position: absolute; top: -1000px; left: -1000px; opacity: 0;" ' + (setting.isone ? '' : 'multiple="multiple"') + ' ' + (setting.isone ? '' : 'multiple="multiple"') + ' />');
+
+                $(setting.btndom).click(function () { $("#" + fileid).click(); });
+
+                $("#" + fileid).change(function () {
+                    var filedoms = new Array(); //图片对象列表
+
+                    var files = $(this).get(0).files;
+                    if (files == null || files.length == 0) return;
+                    //生成图片列表唯一ID
+                    for (var i = 0; i < files.length; i++) {
+                        filedoms.push({
+                            file: files[i],
+                            id: 'uppic_' + this_0.uploadindex
+                        });
+                        this_0.uploadindex++;
+                    }
+
+                    btndomtext = $(setting.btndom).html();
+
+                    if (setting.btnispic == false) {
+                        btndis($(setting.btndom), "正在上传");
+                    }
+
+                    this_0.filecount = filedoms.length;
+                    this_0.fileindex = 0;
+                    if (setting.OnBegin != null && $.isFunction(setting.OnBegin)) {
+                        //通过回调函数中断上传
+                        if (setting.OnBegin(filedoms) == false) {
+                            if (setting.btnispic == false) {
+                                btnopen($(setting.btndom), btndomtext);
+                            }
+                            return;
+                        }
+                    }
+                    this_0.uploadUpyunBase(setting.btndom, filedoms, setting.OnProgressOne, setting.OnSuccessOne, function () {
+                        if (setting.btnispic == false) {
+                            btnopen($(setting.btndom), btndomtext);
+                        }
+                        if (setting.OnSuccess != null && $.isFunction(setting.OnSuccess))
+                            setting.OnSuccess();
+                    });
+                });
+            }
+        }
+        return {
+            //上传到又拍云
+            build: function (setting) {
+                render.uploadUpyun(setting);
+            }
+        }
+    }
+    var UploadVideo = function () {
+        var render = {
+            //上传按钮原文本内容
+            btndomtext: "",
+            //ajax请求进度条
+            xhrOnProgress: function (fun) {
+                var this_0 = this;
+
+                this_0.xhrOnProgress.onprogress = fun;
+                return function () {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (typeof this_0.xhrOnProgress.onprogress !== 'function') {
+                        return xhr;
+                    }
+                    if (this_0.xhrOnProgress.onprogress && xhr.upload) {
+                        xhr.upload.onprogress = this_0.xhrOnProgress.onprogress;
+                    }
+                    return xhr;
+                }
+            },
+            uploadUpyun: function (setting) {
+                var this_0 = this;
+                //生成file控件并触发
+                var fileid = 'xh_file_' + setting.btndom.replace('.', '');
+                $("#" + fileid).remove();
+                $(document.body).append('<input type="file" id="' + fileid + '" accept="video/mp4,.flv,.avi" style="position: absolute; top: -1000px; left: -1000px; opacity: 0;" ' + (setting.isone ? '' : 'multiple="multiple"') + ' />');
+                $(setting.btndom).click(function () { $("#" + fileid).click(); });
+                $("#" + fileid).change(function () {
+                    var file = $(this).get(0).files[0];
+                    if (file == null) return;
+
+                    var filetype = file.type;
+                    if (file.size > setting.maxsize) {
+                        xh.alert("最大允许上传" + (setting.maxsize / 1024 / 1024) + "M视频");
+                        return false;
+                    }
+                    //部分格式js无法识别，手动获取格式
+                    if (strisnull(filetype)) {
+                        filetype = file.name.substr(file.name.lastIndexOf('.') + 1);
+                    }
+                    btndomtext = $(setting.btndom).html();
+                    btndis($(setting.btndom), "正在上传");
+
+                    if (setting.OnBegin != null && $.isFunction(setting.OnBegin)) {
+                        setting.OnBegin();
+                    }
+                    xh.get("Upload/GetUpyunAuthentionVideo", { "filesize": file.size, "filetype": filetype }, function (result) {
+                        var formData = new FormData();
+                        formData.append("policy", result.policy);
+                        formData.append("authorization", result.authorization);
+                        formData.append("file", file);
+
+                        var pichost = result.pichost;
+                        $.ajax({
+                            url: result.url,
+                            type: "POST",
+                            data: formData,
+                            contentType: false,
+                            processData: false,
+                            xhr: this_0.xhrOnProgress(function (e) {
+                                var percent = Math.round(e.loaded * 100 / e.total);
+                                if (setting.OnProgress != null && $.isFunction(setting.OnProgress)) {
+                                    setting.OnProgress(percent);
+                                }
+                            }),
+                            success: function (data, textStatus, xhr) {
+                                var msg2 = JSON.parse(data);
+
+                                xh.get("Upload/GetVideoMeta", { source: msg2.url }, function (meta) {
+                                    if (setting.OnSuccess != null && $.isFunction(setting.OnSuccess))
+                                        setting.OnSuccess(meta);
+
+                                    //状态还原
+                                    btnopen($(setting.btndom), "选择视频");
+                                }, null, false);
+                            },
+                            error: function (error) {
+                                console.log(error.statusText);
+                                btnopen($(setting.btndom), btndomtext);
+                            }
+                        });
+                    }, function (error) {
+                        console.log(error);
+                        btnopen($(setting.btndom), btndomtext);
+                    }, false);
+                });
+            }
+        };
+        return {
+            build: function (setting) {
+                render.uploadUpyun(setting);
+            }
+        }
+    }
+})(jQuery);
+//公共接口
+(function ($) {
+    $.extend(xh, {
+        //获取登录用户信息
+        //getuser: function (callback) {
+        //    xh.gettoken(function (token) {
+        //        if (!strisnull(token)) {
+        //            xh.get("User/GetUserForToken", null, function (user) {
+        //                if (callback != null && $.isFunction(callback))
+        //                    callback(user);
+        //            }, null, false);
+        //        }
+        //    });
+        //},
+        //rsa加密
+        rsaencode: function (text, callback) {
+            $.get("/Home/Rsa", { "text": text }, callback);
+        },
+        //发送验证码
+        sendcode: function (phone, isnew, callback) {
+            xh.getapptoken(function (apptoken) {
+                xh.post("Account/SendPhoneCode", { "phone": phone, "apptoken": apptoken, "isnew": isnew }, callback);
+            });
+        },
+        //获取接口请求权限
+        getapptoken: function (callback) {
+            $.get("/Home/GetAppToken", null, callback);
+        },
+        //查询收件地址
+        getaddress: function (parentcode, callback) {
+            xh.get("Express/GetAddressList", { "parentcode": parentcode }, function (data) {
+                if (callback != null && $.isFunction(callback))
+                    callback(data);
+            });
+        },
+        //查询省市列表
+        getcity: function (parentid, callback) {
+            xh.get("Base/GetCityList", { "parentid": parentid }, function (data) {
+                if (callback != null && $.isFunction(callback))
+                    callback(data);
+            });
+        },
+        //上传网络图片
+        uploadweb: function (webimg, callback) {
+            xh.post("Upload/UploadWebImg", { "webimg": webimg }, callback);
+        },
+        //查询邮费模板
+        getpostagelist: function (data, callback) {
+            xh.get("Postage/GetPostageList", data, callback);
+        },
+        //增加点击数
+        addclick: function (type, id, callback) {
+            xh.post("System/AddClick", { "click": type, "id": id }, callback);
+        },
+        //更新淘宝商品信息到本地
+        updatetaobao: function (dom, id, taobaoid, callback) {
+            var clicktext = '';
+            if (dom != null) {
+                clicktext = $(dom).attr("onclick");
+                $(dom).removeAttr("onclick");
+                $(dom).html("更新中");
+            }
+            if (taobaoid == 0) {
+                if (callback != null && $.isFunction(callback)) {
+                    callback();
+                }
+                return;
+            };
+            xh.get(xh.baichuan + "/Home/GetProduct", { "taobaoid": taobaoid, "havedesc": true, "nocache": true }, function (product) {
+                if (product == null) {
+                    if (dom != null) {
+                        $(dom).removeClass("font_blue").addClass("font_gray").html("已下架");
+                    }
+                    return;
+                }
+                else {
+                    //var images = new Array();
+                    //if (product.Images != null) {
+                    //    for (var i = 0; i < product.Images.length; i++) {
+                    //        images.push({ "imgsrc": product.Images[i].ImgSrc });
+                    //    }
+                    //}
+
+                    //var skus = new Array();
+                    //if (product.Skus != null) {
+                    //    for (var i = 0; i < product.Skus.length; i++) {
+                    //        skus.push({
+                    //            "style": product.Skus[i].Style.Name,
+                    //            "size": product.Skus[i].Size.Name,
+                    //            "styletaobaoid": product.Skus[i].Style.TaobaoID,
+                    //            "sizetaobaoid": product.Skus[i].Size.TaobaoID,
+                    //            "taobaoid": product.Skus[i].TaobaoID,
+                    //            "stock": product.Skus[i].Stock,
+                    //            "baseprice": product.Skus[i].BasePrice
+                    //        });
+                    //    }
+                    //}
+                    console.log(product);
+                    product.ID = id;
+                    xh.post("Product/UpdateProductTaobao", product, function (data) {
+                        if (callback != null && $.isFunction(callback)) {
+                            callback();
+                        } else {
+                            xh.dialog("更新成功");
+                            if (dom != null) {
+                                $(dom).attr("onclick", clicktext);
+                                $(dom).removeClass("font_blue").addClass("font_green").html("更新完");
+                            }
+                        }
+                    }, function () {
+                        if (dom != null) {
+                            if (callback != null && $.isFunction(callback)) {
+                                callback();
+                            } else {
+                                $(dom).attr("onclick", clicktext);
+                                $(dom).removeClass("font_blue").addClass("font_del").html("错误");
+                            }
+                        }
+                    }, false);
+                }
+            }, function () {
+                if (dom != null) {
+                    if (callback != null && $.isFunction(callback)) {
+                        callback();
+                    } else {
+                        $(dom).attr("onclick", clicktext);
+                        $(dom).html("未更新");
+                    }
+                }
+            });
+        },
+        //新增淘宝商品信息到本地
+        addtaobao: function (shopid) {
+            var html = '';
+            if (strisnull(shopid) || shopid == 0) {
+                html += '<div class="form_item"><span class="form_key">店铺ID：</span><div class="form_value"><input type="text" class="txt_tb_shopid short" value="" /></div></div>';
+            }
+            html += '<div class="form_item"><span class="form_key">淘宝商品链接：</span><div class="form_value"><input type="text" class="txt_tb_tblink" value="" /></div></div><div class="form_item"><div class="form_value"><button class="js_tb_begin btn_blue btn_l">开始采集</button></div></div>';
+
+            xh.form('采集淘宝', html);
+
+            var btndom = $(".js_tb_begin");
+            var pro_pics = new Array();
+            var pro_sku = new Array();
+
+            btndom.click(function () {
+                if (strisnull(shopid) || shopid == 0) {
+                    shopid = $(".txt_tb_shopid").val();
+                }
+                if (strisnull(shopid) || shopid == 0) {
+                    xh.alert("请填写店铺ID");
+                    return;
+                }
+                var tblink = $(".txt_tb_tblink").val();
+                if (strisnull(tblink)) {
+                    xh.alert("请填写商品链接");
+                    return;
+                }
+                var taobaoid = getQueryStringForUrl(tblink, "id");
+                if (strisnull(taobaoid)) {
+                    xh.alert("链接未获取到ID");
+                    return;
+                }
+
+                btndis(btndom, "获取中...");
+                //获取淘宝商品
+                xh.get(xh.baichuan + "/Home/GetProduct", { "taobaoid": taobaoid, "havedesc": true, "nocache": true }, function (product) {
+                    product.Shop = {};
+                    product.Shop.ID = shopid;
+                    pro_pics = product.Images;
+                    pro_sku = product.Skus;
+
+                    //上传封面
+                    btndis(btndom, "上传封面");
+                    xh.get("Base/ImageWebToThis", { "webimage": product.FaceSrc }, function (data) {
+                        //上传商品图
+                        uploadpropic(0, function () {
+                            product.Images = pro_pics;
+                            //上传sku图
+                            uploadskupic(0, function () {
+                                //上传视频
+                                uploadvideo(product.Video, function (videourl) {
+                                    if (!strisnull(videourl)) {
+                                        product.Video.VideoUrl = videourl;
+                                    }
+                                    product.Skus = pro_sku;
+                                    //入库本地
+                                    btndis(btndom, "入库中");
+                                    xh.post("Product/InsertProductTaobao", product, function (data) {
+                                        if (data > 0) {
+                                            xh.dialog('上传成功');
+                                        } else {
+                                            xh.dialog('上传失败');
+                                        }
+                                        btnopen(btndom, "开始采集");
+                                    }, function (err) {
+                                        xh.alert("入库出错：" + err.ErrorMessage);
+                                        btnopen(btndom, "开始采集");
+                                    }, false);
+                                });
+                            });
+                        });
+                    }, function (err) {
+                        xh.alert("上传封面图出错：" + err.ErrorMessage);
+                        btnopen(btndom, "开始采集");
+                    }, false);
+                }, function (err) {
+                    xh.alert("获取商品出错：" + err.ErrorMessage);
+                    btnopen(btndom, "开始采集");
+                }, false);
+            });
+            //上传商品图片
+            function uploadpropic(i, callback) {
+                if (pro_pics != null && pro_pics.length > 0) {
+                    btndis(btndom, "上传图片" + (i + 1) + "/" + pro_pics.length);
+                    xh.get("Base/ImageWebToThis", { "webimage": pro_pics[i].ImgSrc }, function (data) {
+                        pro_pics[i].ImgSrc = data.ImgSrc;
+                        pro_pics[i].Width = data.Width;
+                        pro_pics[i].Height = data.Height;
+                        pro_pics[i].Size = data.Size;
+
+                        i++;
+                        if (i < pro_pics.length) {
+                            uploadpropic(i, callback);
+                        } else if (callback != null && $.isFunction(callback)) {
+                            callback();
+                        }
+                    }, null, false);
+                } else if (callback != null && $.isFunction(callback)) {
+                    callback();
+                }
+            }
+            //上传视频
+            function uploadvideo(video, callback) {
+                if (video != null && !strisnull(video.VideoUrl)) {
+                    btndis(btndom, "上传视频");
+                    xh.get("Base/VideoWebToThis", { "webvideo": video.VideoUrl }, function (data) {
+                        if (callback != null && $.isFunction(callback)) {
+                            callback(data);
+                        }
+                    });
+                } else if (callback != null && $.isFunction(callback)) {
+                    callback(null);
+                }
+            }
+            //上传sku图片
+            function uploadskupic(i, callback) {
+                if (pro_sku != null && pro_sku.length > 0) {
+                    btndis(btndom, "上传Sku图片" + (i + 1) + "/" + pro_sku.length);
+                    if (pro_sku[i].Style != null && !strisnull(pro_sku[i].Style.FaceUrl)) {
+                        xh.get("Base/ImageWebToThis", { "webimage": pro_sku[i].Style.FaceUrl }, function (data) {
+                            pro_sku[i].FaceUrl = data.ImgSrc;
+
+                            i++;
+                            if (i < pro_sku.length) {
+                                uploadskupic(i);
+                            }
+                        }, null, false);
+                    }
+                }
+                if (callback != null && $.isFunction(callback)) {
+                    callback();
+                }
+            }
+        },
+        //下载客户端
+        downloadapp: function (type) {
+            xh.get("System/AppVersionDownload", { "type": type }, function (download) {
+                location.href = download;
+            });
+        },
+        //动态点赞
+        trendtop: function (dom, id, state, callback) {
+            var api = state ? "InsertTop" : "DeleteTop";
+            xh.post("Interact/" + api, { "objectid": id, "objecttype": "trend" }, function (data) {
+                if (data) {
+                    var click = $(dom).attr("onclick");
+                    if (state) {
+                        $(dom).addClass("active");
+                        $(dom).attr("onclick", click.replace('true', 'false'));
+                    } else {
+                        $(dom).removeClass("active");
+                        $(dom).attr("onclick", click.replace('false', 'true'));
+                    }
+                    if (callback != null) {
+                        callback();
+                    }
+                }
+            });
+        },
+        //动态收藏
+        trendsave: function (dom, id, state, callback) {
+            var api = state ? "InsertSave" : "DeleteSave";
+            xh.post("Interact/" + api, { "objectid": id, "objecttype": "trend" }, function (data) {
+                if (data) {
+                    var click = $(dom).attr("onclick");
+                    if (state) {
+                        $(dom).addClass("active");
+                        $(dom).attr("onclick", click.replace('true', 'false'));
+                    } else {
+                        $(dom).removeClass("active");
+                        $(dom).attr("onclick", click.replace('false', 'true'));
+                    }
+                    if (callback != null) {
+                        callback();
+                    }
+                }
+            });
+        },
+        //关注用户
+        atteuser: function (dom, id, state) {
+            if (state) {
+                _post();
+            } else {
+                xh.confirm("确定要取消关注吗？", function () { _post(); });
+            }
+
+            function _post() {
+                var api = state ? "InsertAttentions" : "DeleteAttentions";
+                xh.post("User/" + api, { "atteuserids": [id] }, function (data) {
+                    if (data) {
+                        $(dom).removeClass("btn_" + (state ? "red_null" : "null"));
+                        $(dom).addClass("btn_" + (state ? "null" : "red_null"));
+                        var click = $(dom).attr("onclick");
+                        if (state) {
+                            $(dom).attr("onclick", click.replace('true', 'false'));
+                            $(dom).html("已关注");
+                        }
+                        else {
+                            $(dom).attr("onclick", click.replace('false', 'true'));
+                            $(dom).html("关注TA");
+                        }
+                    }
+                });
+            }
+        },
+        //获取视频播放地址
+        getvideourl: function (baseurl, callback) {
+            xh.rsaencode(baseurl, function (rsa) {
+                xh.get("Video/GetUpt", { "videourl": rsa }, function (playurl) {
+                    if (callback != null) {
+                        callback(playurl);
+                    }
+                });
+            });
+        }
+    });
+})(jQuery);
+
+//内容
+//与内容关联的config
+(function ($) {
+    $.extend(xh, {
+        //objecttype: {
+        //    trend: "trend",
+        //    album: "album",
+        //    video: "video",
+        //    topic: "topic",
+        //    topicreply: "topicreply",
+        //    word: "word",
+        //    comment: "comment",
+        //    fleas: "fleas",
+        //    org: "org",
+        //    orgactivity: "orgactivity",
+        //    orgwithdraw: "orgwithdraw",
+        //    orgactivityorders: "orgactivityorders",
+        //    shop: "shop",
+        //    shopwithdraw: "shopwithdraw",
+        //    product: "product",
+        //    orders: "orders",
+        //    ordersrefund: "ordersrefund"
+        //},
+        objectname: function (objecttype) {
+            switch (objecttype) {
+                case "trend":
+                    return "日常";
+                case "album":
+                    return "摄影";
+                case "video":
+                    return "视频";
+                case "topic":
+                    return "话题";
+                case "topicreply":
+                    return "话题回复";
+                case "word":
+                    return "文章";
+                case "comment":
+                    return "评论";
+                case "fleas":
+                    return "二手";
+                case "org":
+                    return "组织";
+                case "orgactivity":
+                    return "组织活动";
+                case "orgwithdraw":
+                    return "组织提现";
+                case "orgactivityorders":
+                    return "组织活动订单";
+                case "shop":
+                    return "店铺";
+                case "shopwithdraw":
+                    return "店铺提现";
+                case "product":
+                    return "商品";
+                case "orders":
+                    return "商城订单";
+                case "ordersrefund":
+                    return "商城订单退款";
+                default:
+                    return objecttype;
+            }
+        },
+        coopname: function (coop) {
+            switch (coop) {
+                case "qq":
+                    return "QQ";
+                case "sina":
+                    return "微博";
+                case "weixin":
+                    return "微信";
+                case "phone":
+                    return "手机";
+            }
+        },
+        coopicon: function (coop) {
+            switch (coop) {
+                case "qq":
+                    return '<i class="icon_qq"></i>';
+                case "sina":
+                    return '<i class="icon_weibo"></i>';
+                case "weixin":
+                    return '<i class="icon_weixin"></i>';
+                case "phone":
+                    return '<i class="icon_phone"></i>';
+            }
+        },
+        couriercode: function (name) {
+            var code = '';
+            switch (name) {
+                case "百世汇通":
+                    code = "huitongkuaidi";
+                    break;
+                case "天天快递":
+                    code = "tiantian"; break;
+                case "顺丰速递":
+                    code = "shunfeng"; break;
+                case "圆通速递":
+                    code = "yuantong"; break;
+                case "韵达快运":
+                    code = "yunda"; break;
+                case "中通速递":
+                    code = "zhongtong"; break;
+                case "申通速递":
+                    code = "shentong"; break;
+                case "ems":
+                    code = "ems"; break;
+                case "快捷速递":
+                    code = "kuaijiesudi"; break;
+            }
+            return code;
+        },
+        kuaidi100: function (code, nu) {
+            return "http://m.kuaidi100.com/result.jsp?com=" + code + "&nu=" + nu;
+        },
+        wallettype: function (code) {
+            switch (code) {
+                case "alipay": return "支付宝";
+                case "weixin": return "微信";
+                case "bank": return "银行";
+                default: return code;
+            }
+        },
+        authenticatename: function (code) {
+            switch (code) {
+                case "photoer":
+                    return "KOL";
+                case "shop":
+                    return "商家";
+                case "org":
+                    return "组织";
+                default:
+            }
+        }
+    });
+})(jQuery);
+
+//页面ui相关
+(function ($) {
+    $.extend(xh, {
+        delete: function (ids, callback) {
+            new Dialog().build(ids, "删除", callback);
+        },
+        good: function (ids, state, callback) {
+            new Dialog().build(ids, state ? "加精" : "取消加精", callback);
+        },
+        check: function (ids, state, callback) {
+            new Dialog().build(ids, state ? "审核" : "取消审核", callback);
+        },
+        top: function (ids, state, callback) {
+            new Dialog().build(ids, state ? "置顶" : "取消置顶", callback);
+        },
+        other: function (ids, text, callback) {
+            new Dialog().build(ids, text, callback);
+        },
+        reason: function (ids, callback, newreason, name, defreason) {
+            if (ids.length == 0) {
+                xh.alert("选择为空");
+                return;
+            }
+            var reasonname = "理由";
+            var reasonlist = ["影响社区氛围", "含有违规链接", "极端言论", "恶意刷屏", "带有二维码", "带有淘口令", "违规广告", "内容涉及侵权", "作者要求删除", "有不正规的汉服", "不允许发布非原创作品"];
+
+            if (newreason != null && newreason.length > 0) {
+                reasonlist = newreason;
+            }
+            if (!strisnull(name)) {
+                reasonname = name;
+            }
+            var html = '';
+
+            if (isMobile()) {
+                html += '<div class="reason_box"><div class="sel_reason">';
+                for (var i = 0; i < reasonlist.length; i++) {
+                    html += '<a class="badge_gray">' + reasonlist[i] + '</a>';
+                }
+                html += '</div><p><input type="text" class="txt_selreason bancover" ';
+                if (!strisnull(defreason)) {
+                    html += ' value="' + defreason + '"';
+                }
+                html += '></p>';
+            } else {
+                html += '<div class="form_item"><label class="form_key">选择' + reasonname + '</label><div class="form_value"><div class="form_text sel_reason">';
+                for (var i = 0; i < reasonlist.length; i++) {
+                    html += '<a class="badge_gray">' + reasonlist[i] + '</a>';
+                }
+                html += '</div></div></div><div class="form_item"><label class="form_key">确定' + reasonname + '</label><div class="form_value"><input type="text" class="txt_selreason" ';
+                if (!strisnull(defreason)) {
+                    html += ' value="' + defreason + '"';
+                }
+                html += '/></div></div>';
+            }
+
+            xh.confirm(html, function () {
+                var text = $(".txt_selreason").val();
+                if (strisnull(text)) {
+                    xh.alert("请选择" + reasonname);
+                } else {
+                    if (callback != null && $.isFunction(callback))
+                        callback(text);
+                }
+            });
+            $(".sel_reason a").off("click");
+            $(document).on("click", ".sel_reason a", function () {
+                $(".txt_selreason").val($(this).html());
+            });
+        },
+        //开关UI样式
+        switch: function (dom, text, state) {
+            var untext = '';
+            if (text == '加精') {
+                untext = '未加精';
+            }
+            else if (text == '审核') {
+                untext = '待审核';
+            }
+            else if (text == '热门') {
+                untext = '普通';
+            }
+            else if (text == '置顶') {
+                untext = '普通';
+            } else if (text == '广场显示') {
+                untext = '广场隐藏';
+            } else if (text == "封号") {
+                untext = '正常';
+            } else if (text == '禁言') {
+                untext = '正常';
+            } else if (text == "上线") {
+                untext = "下线";
+            } else if (text == "上架") {
+                untext = "下架";
+            } else if (text == "允同") {
+                untext = "禁同";
+            } else if (text == "已关店") {
+                untext = "营业中";
+            } else {
+                untext = text;
+            }
+
+            if (state) {
+                $(dom).addClass("on");
+                $(dom).find("em").html(text);
+                $(dom).attr("data-checked", "True");
+                $(dom).attr("onclick", $(dom).attr("onclick").replace('true', 'false'));
+            } else {
+                $(dom).removeClass("on");
+                $(dom).find("em").html(untext);
+                $(dom).attr("data-checked", "False");
+                $(dom).attr("onclick", $(dom).attr("onclick").replace('false', 'true'));
+            }
+        },
+        //移除一个元素特效
+        remove: function (dom, callback) {
+            $(dom).fadeOut();
+            setTimeout(function () {
+                $(dom).remove();
+                if (callback != null && $.isFunction(callback)) {
+                    callback();
+                }
+            }, 500);
+        },
+        //无限滚动瀑布流
+        masonry: function (dom, html, isfirst) {
+            var $grid = $(dom);
+            var $html = $(html);
+            if (isfirst) {
+                if ($grid != null) {
+                    $grid.masonry('destroy').empty();
+                }
+                if ($html == null || $html.length == 0) {
+                    $grid.html(xh.nodata)
+                }
+                else {
+                    $grid.html($html);
+                    $grid.masonry({
+                        itemSelector: '.grid-item',
+                        isFitWidth: false,
+                        isAnimated: true,
+                        isResizableL: true,
+                    });
+
+                    //$grid.hide();
+                    //xh.loadshow();
+                    //$grid.html($html)
+                    //    .imagesLoaded(function () {
+                    //        $grid.show();
+                    //        $grid.masonry({
+                    //            itemSelector: '.grid-item',
+                    //            isFitWidth: true,
+                    //            isAnimated: true,
+                    //        });
+                    //        xh.loadhide();
+                    //    });
+                }
+            } else {
+                if ($html == null || $html.length == 0) {
+                    xh.loadhide();
+                }
+                else {
+                    $grid.append($html);
+                    $grid.masonry('appended', $html);
+                    //$html.hide();
+                    //$grid.imagesLoaded(function () {
+                    //    $html.show();
+                    //    $grid.masonry('appended', $html);
+                    //});
+                }
+            }
+        },
+        //弹出视频播放
+        formvideo: function (videourl) {
+            xh.getvideourl(videourl, function (playurl) {
+                var winwidth = window.screen.availWidth - 50;
+                var winheight = window.screen.availHeight - 83;
+                var height = winheight * 0.7;
+                var width = height * 16 / 9;
+                xh.form('视频播放', '<div class="js_videoplay video_face" style="width:' + width + 'px;height:' + height + 'px;"></div>');
+                videoplay(".js_videoplay", null, playurl, width, height, true, true);
+            });
+        }
+    });
+
+    var Dialog = function () {
+        return {
+            build: function (ids, text, callback) {
+                if (ids.length == 0) {
+                    xh.alert("选择为空");
+                }
+                else {
+                    xh.confirm("确定要" + text + "吗？", function () {
+                        callback();
+                    });
+                }
+            }
+        }
+    }
+})(jQuery);
+
+//html代码段
+(function ($) {
+    $.extend(xh, {
+        //店铺类型
+        shoptypehtml: function (typeid, callback) {
+            xh.get("Shop/GetShopTypeList", null, function (type) {
+                var html = '<option value="0">全部</option>';
+                for (var i = 0; i < type.length; i++) {
+                    html += '<option value="' + type[i].ID + '" ' + (type[i].ID == typeid ? 'selected="selected"' : '') + '>' + type[i].Name + '</option>';
+                }
+                $(".sel_type").html(html);
+                if (callback != null && $.isFunction(callback))
+                    callback();
+            });
+        },
+        //商品类型
+        producttype: function (typeid, callback) {
+            if (callback == null || !$.isFunction(callback))
+                return '';
+
+            var producttype = new Array();
+            var html = '';
+            var small = null;
+            var defbigid = 0;
+            if (producttype.length == 0) {
+                xh.get("Product/GetProductTypeList", null, function (data) {
+                    producttype = data;
+                    callback(_typehtml());
+                });
+            } else {
+                callback(_typehtml());
+            }
+
+            $(document).on("change", ".sel_type1", function () {
+                defbigid = $(this).val();
+                if (defbigid > 0) {
+                    small = _gettype(defbigid);
+                    $(".sel_type2").html(_selecthtml(small, typeid));
+                } else {
+                    $(".sel_type2").html('<option value="0">请选择</option>');
+                }
+            });
+            //弹出窗html组建
+            function _typehtml() {
+                //选中默认值
+                defbigid = _gettypeparent(typeid);
+                var html = '<select class="fl mr20 sel_type1">' + _selecthtml(_gettype(0), defbigid) + '</select>';
+                small = _gettype(defbigid);
+
+                html += '<select class="fl mr20 sel_type2">';
+                if (defbigid > 0) {
+                    html += _selecthtml(small, typeid);
+                } else {
+                    html += '<option value="0">请选择</option>';
+                }
+                html += '</select>';
+                return html;
+            }
+            //根据父类型获取子类型列表
+            function _gettype(parentid) {
+                var thistype = new Array();
+                for (var i = 0; i < producttype.length; i++) {
+                    if (producttype[i].ParentID == parentid)
+                        thistype.push(producttype[i]);
+                }
+                return thistype;
+            }
+            //根据子类型获取父类型
+            function _gettypeparent(childid) {
+                var returnid = 0;
+                for (var i = 0; i < producttype.length; i++) {
+                    if (producttype[i].ID == childid) {
+                        for (var j = 0; j < producttype.length; j++) {
+                            if (producttype[j].ID == producttype[i].ParentID)
+                                returnid = producttype[j].ID;
+                        }
+                    }
+                }
+                return returnid;
+            }
+            //生成select内容
+            function _selecthtml(options, selectid) {
+                var html = '<option value="0">请选择</option>';
+                for (var i = 0; i < options.length; i++) {
+                    html += '<option value="' + options[i].ID + '" ' + (selectid == options[i].ID ? 'selected="selected"' : '') + '>' + options[i].Name + '</option>';
+                }
+                return html;
+            }
+        },
+        //邮费模板下拉框
+        postagehtml: function (postageid, role, callback) {
+            xh.get("Postage/GetPostageList", { "role": role }, function (list) {
+                if (list != null && list.length > 0) {
+                    var html = '<option value="0">无邮费</option>';
+                    for (var j = 0; j < list.length; j++) {
+                        html += '<option value="' + list[j].ID + '" ' + (postageid == list[j].ID ? 'selected="selected"' : '') + '>' + list[j].Name + '</option>';
+                    }
+                    if (callback != null && $.isFunction(callback)) {
+                        callback(html);
+                    }
+                }
+            });
+        },
+        //快递公司列表
+        expresshtml: function (id) {
+            xh.get("Express/GetExpressList", null, function (data) {
+                var html = '<option value="0">请选择</option>';
+                for (var i = 0; i < data.length; i++) {
+                    html += '<option value="' + data[i].ID + '" ' + (data[i].ID == id ? 'selected="selected"' : "") + '>' + data[i].Name + '</option>';
+                }
+                $(".sel_express").html(html);
+            });
+        },
+        //收货地址
+        addresshtml: function (addressids) {
+            var adds = [];
+            if (!strisnull(addressids)) {
+                adds = addressids.split(',');
+            }
+            xh.getaddress(null, function (data) {
+                addressone(".sel_address1", data, null);
+
+                if (adds.length == 3) {
+                    $(".sel_address1").val(adds[0]);
+                    xh.getaddress(adds[0], function (data1) {
+                        addressone(".sel_address2", data1, adds[1]);
+                        xh.getaddress(adds[1], function (data2) {
+                            addressone(".sel_address3", data2, adds[2]);
+                        });
+                    });
+                }
+
+                $(".sel_address1").change(function () {
+                    var parentcode = $(this).val();
+                    xh.getaddress(parentcode, function (data1) {
+                        addressone(".sel_address2", data1, null);
+                    });
+                });
+                $(".sel_address2").change(function () {
+                    parentcode = $(this).val();
+                    xh.getaddress(parentcode, function (data2) {
+                        addressone(".sel_address3", data2, null);
+                    });
+                });
+            });
+
+            function addressone(dom, data, id) {
+                var html = '<option value="0">请选择</option>';
+                for (var i = 0; i < data.length; i++) {
+                    html += '<option value="' + data[i].Code + '" ' + (data[i].Code == id ? 'selected="selected"' : '') + '>' + data[i].Name + '</option>';
+                }
+                $(dom).html(html);
+            }
+        },
+        //省市
+        cityhtml: function (cityids) {
+            var adds = null;
+            if (!strisnull(cityids)) {
+                adds = cityids.split(',');
+            }
+
+            xh.getcity(0, function (data) {
+                cityone(".sel_city1", data, 0);
+
+                if (adds != null && adds.length == 2) {
+                    $(".sel_city1").val(adds[0]);
+                    xh.getcity(adds[0], function (data2) {
+                        cityone(".sel_city2", data2, adds[1]);
+                    });
+                }
+
+                $(".sel_city1").change(function () {
+                    var parentid = $(this).val();
+                    xh.getcity(parentid, function (data2) {
+                        cityone(".sel_city2", data2, 0);
+                    });
+                });
+            });
+
+            function cityone(dom, data, id) {
+                var html = '<option value="0">请选择</option>';
+                for (var i = 0; i < data.length; i++) {
+                    html += '<option value="' + data[i].ID + '" ' + (data[i].ID == id ? 'selected="selected"' : '') + '>' + data[i].Name + '</option>';
+                }
+                $(dom).html(html);
+            }
+        },
+        //组织类型
+        orgtypehtml: function (id) {
+            xh.get("Org/GetOrgTypeList", null, function (data) {
+                var html = '<option value="0">请选择</option>';
+                for (var i = 0; i < data.length; i++) {
+                    html += '<option value="' + data[i].ID + '" ' + (data[i].ID == id ? 'selected="selected"' : "") + '>' + data[i].Name + '</option>';
+                }
+                $(".sel_orgtype").html(html);
+            });
+        },
+        //链接加上样式
+        linkstyle: function (text) {
+            var match = /((http|ftp|https):\/\/)(([a-zA-Z0-9\._-]+\.[a-zA-Z]{2,6})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))(:[0-9]{1,4})*(\/[a-zA-Z0-9\&%_\.\/-~-]*)?/;
+            var reg = new RegExp(match, 'gi');
+            var urls = text.match(reg);
+            if (urls == null) {
+                return text;
+            }
+            for (var i = 0; i < urls.length; i++) {
+                var newurl = urls[i];
+                if (newurl.indexOf("?") > 0) {
+                    newurl += "&";
+                } else {
+                    newurl += "?";
+                }
+                newurl += "activity=1";
+                text = text.replace(urls[i], '<a href="' + newurl + '">网页链接</a>');
+            }
+            return text;
+        },
+        //@用户
+        aitestyle: function (text) {
+            var match = /<M (\S+)>(\S+)<\/M>/;
+            var reg = new RegExp(match, 'gi');
+
+            return text.replace(reg, '<a href="/u/$1">$2</a>');
+        },
+        bankhtml: function (id) {
+            xh.get("Base/GetBankList", null, function (data) {
+                if (data != null) {
+                    var html = '<option value="0">请选择</option>';
+                    for (var i = 0; i < data.length; i++) {
+                        html += '<option value="' + data[i].ID + '" ' + (data[i].ID == id || data[i].Name == id ? 'selected="selected"' : '') + '>' + data[i].Name + '</option>';
+                    }
+                    $(".sel_bank").html(html);
+                }
+            });
+        },
+        //摄影staff
+        staff: function (odata) {
+            var html = '';
+            if (odata != null) {
+                html += '<div class="trend_albumtit">';
+                if (odata.model != null && odata.model.length > 0) {
+                    html += '<i class="font_gray">麻豆&nbsp;|&nbsp;</i>';
+                    for (var j = 0; j < odata.model.length; j++) {
+                        if (j > 0 && j + 1 < odata.model.length)
+                            html += '&nbsp;&nbsp;';
+                        html += odata.model[j].name;
+                    }
+                    html += '&nbsp;&nbsp;&nbsp;&nbsp;';
+                }
+                if (odata.photoer != null && odata.photoer.length > 0) {
+                    html += '<i class="font_gray">摄影&nbsp;|&nbsp;</i>';
+                    for (var j = 0; j < odata.photoer.length; j++) {
+                        if (j > 0 && j + 1 < odata.photoer.length)
+                            html += '&nbsp;&nbsp;';
+                        html += odata.photoer[j].name;
+                    }
+                    html += '&nbsp;&nbsp;&nbsp;&nbsp;';
+                }
+                if (odata.store != null && odata.store.length > 0) {
+                    html += '<i class="font_gray">服装&nbsp;|&nbsp;</i>';
+                    for (var j = 0; j < odata.store.length; j++) {
+                        if (j > 0 && j + 1 < odata.store.length)
+                            html += '&nbsp;&nbsp;';
+                        html += odata.store[j].name;
+                    }
+                }
+                html += '</div>';
+            }
+            return html;
+        },
+    });
+})(jQuery);
+
+//删除动态的理由
+xh.trenddelete = new Array("含有违规链接", "刷屏", "违规广告", "兼职广告", "利诱广告", "违规代购", "诱导点赞/评论", "带有淘宝链接或淘口令", "人身攻击", "带有二维码", "内容影响社区气氛", "二手必须发往二手铺");
+//禁言理由
+xh.userblack = new Array('群发私信骚扰用户', '骚扰用户', '影响社区秩序', '发布违规广告', '影响社区氛围');
+//角色
+xh.role = {
+    unknow: 0,
+    system: 1,
+    admin: 2,
+    shop: 3,
+    org: 4,
+    user: 5,
+    other: 6
+}
+//订单类型
+xh.orderstype = {
+    hanbi: 1,
+    shop: 2,
+    shopson: 3,
+    refund: 4,
+    orgactivity: 5
+};
+//订单状态
+xh.ordersstate = {
+    cancel: 0,
+    add: 1,
+    advance: 2,
+    pay: 3,
+    shippart: 4,
+    ship: 5,
+    success: 6
+};
+//退款状态
+xh.refundstate = {
+    close: 0,
+    begin: 1,
+    no: 2,
+    waitship: 3,
+    ship: 4,
+    success: 5
+};
+//订单商品退款状态
+xh.oproductstate = {
+    default: 0,
+    refund: 1,
+    refundsuccess: 2
+}
+//退款类型
+xh.refundtype = {
+    onlymoney: 0,
+    moneyandproduct: 1,
+    replaceproduct: 2,
+};
+//商城活动类型
+xh.activitytype = {
+    default: 0,  //默认活动
+    seckill: 1   //闪购
+}
+//点击数统计
+xh.click = {
+    poster: 1,
+    lifeshop: 2,
+    shopbanner: 3,
+    shopspecial: 4
+}
+//当前是否处于退款状态
+xh.isrefund = function (refundstate) {
+    switch (refundstate) {
+        case 0:
+        case xh.refundstate.close:
+        case xh.refundstate.success:
+            return false;
+        default:
+            return true;
+    }
+}
+//组织活动订单状态
+xh.orgordersstate = {
+    refund: -1,
+    close: 0,
+    add: 1,
+    pay: 2,
+    success: 3
+};
+//来源页
+xh.from = {
+    no: "no",
+    search: "search",
+    shoplist: "shoplist",
+    shopmain: "shopmain",
+    type: "type",
+    cart: "cart",
+    save: "save",
+    atte: "atte",
+    default: "default",
+    suggest: "suggest",
+    otherweb: "otherweb",
+    special: "special",
+    activity: "activity",
+    seckill: "seckill",
+    twocode: "twocode"
+};
+//页面设置参数
+var paramDom = {
+    DownRefresh: 0,
+    BackScript: "",
+    Finish: 0,
+    ShowShare: 0,
+    ShareTitle: "",
+    ShareText: "",
+    SharePic: "",
+    ShareLink: "",
+    ShowReport: 0,
+    ReportOType: "",
+    ReportOID: 0,
+    EditState: 0
+}
+//是否本地站点
+function isbate() {
+    var url = location.host;
+    if (url.indexOf("bate.hanfuhui.cn") > -1) {
+        return true;
+    }
+    else if (url.indexOf("hanfuhui.cn") > -1 || url.indexOf("hanfugou.com") > -1) {
+        return false;
+    } else {
+        return true;
+    }
+}
+function setMeta(title, key, describe) {
+
+}
+//分享到微信
+function shareWeixin(url) {
+    xh.form("分享到微信", '<img width="200" src="http://qr.liantu.com/api.php?text=' + url + '" />');
+}
+//各种状态
+(function ($) {
+    $.extend(xh, {
+        //订单状态名称
+        ordersstatename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.ordersstate.add: return "待支付";
+                case xh.ordersstate.advance: return "已预付款";
+                case xh.ordersstate.pay: return "待发货";
+                case xh.ordersstate.ship: return "已发货";
+                case xh.ordersstate.shippart: return "部分发货";
+                case xh.ordersstate.cancel: return "已关闭";
+                case xh.ordersstate.success: return "已完成";
+                default: return "全部";
+            }
+        },
+        //退款状态名称
+        refundstatename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.refundstate.begin: return "待商家处理";
+                case xh.refundstate.no: return "拒绝退款中";
+                case xh.refundstate.close:
+                case 0:
+                    return "退款关闭";
+                case xh.refundstate.success: return "退款成功";
+                case xh.refundstate.waitship: return "等买家发货";
+                case xh.refundstate.ship: return "待商家确认收货";
+                default: '退款关闭';
+            }
+        },
+        //退款描述信息
+        refundstatenote: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.refundstate.begin: return "商家须在$1内处理，如逾期未处理，将自动同意退款。";
+                case xh.refundstate.no: return "买家可在$1内修改售后信息，逾期将自动关闭申请。";
+                case xh.refundstate.admin: return "汉服荟平台方将在1个工作日内处理该退款纠纷。";
+                case xh.refundstate.waitpay: return "款项将在48小时退回支付账户，如使用的银行卡或信用卡支付将取决于银行的处理进度。";
+                case xh.refundstate.waitship: return "买家须在$1内将货物退回商家并填写发货信息，逾期将自动关闭退款。";
+                case xh.refundstate.ship: return "距商家自动确认收货还有$1";
+            }
+        },
+        //退货类型名称
+        refundtypename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.refundtype.onlymoney: return "仅退款";
+                case xh.refundtype.moneyandproduct: return "退款且退货";
+                case xh.refundtype.replaceproduct: return "换货";
+                default:
+            }
+        },
+        //订单商品退款状态
+        oproductstatename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.oproductstate.refund: return "退款中";
+                case xh.oproductstate.refundsuccess: return "退款成功";
+                default:
+            }
+        },
+        //支付方式图标
+        payaction: function (state) {
+            switch (state) {
+                case 'alipay': return '<i class="icon_pay_alipay"></i>';
+                case 'weixin': return '<i class="icon_pay_wx"></i>';
+                case 'weixinjs': return '<i class="icon_pay_wx mr5"></i><span>微信内</span>';
+                case 'weixinh5': return '<i class="icon_pay_wx mr5"></i><span>浏览器</span>';
+                case 'weixinmini': return '<i class="icon_pay_wx mr5"></i><span>小程序</span>';
+                default: return '';
+            }
+        },
+        //平台角色
+        rolename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.role.unknow: return '未知';
+                case xh.role.user: return '买家';
+                case xh.role.shop: return '商家';
+                case xh.role.admin: return '管理员';
+                case xh.role.system: return '系统';
+                case xh.role.other: return '路人';
+                default:
+            }
+        },
+        //组织活动订单状态
+        orgordersstatename: function (state) {
+            state = parseInt(state); //避免传入字符串
+            switch (state) {
+                case xh.orgordersstate.close: return "已关闭";
+                case xh.orgordersstate.add: return "未支付";
+                case xh.orgordersstate.pay: return "待验票";
+                case xh.orgordersstate.refund: return "退款中";
+                case xh.orgordersstate.success: return "已验票";
+                default:
+            }
+        },
+        //第三方接口名称
+        openapilogname: function (from) {
+            switch (from) {
+                case 'alipay':
+                    return '支付宝';
+                case 'qqpay':
+                    return 'QQ钱包';
+                case 'weixinpay':
+                    return '微信支付';
+                case 'baichuan':
+                    return '阿里百川';
+                case 'jushuitan':
+                    return '聚水潭';
+                case 'rongmessage':
+                    return '融云IM';
+                case 'upyun':
+                    return '又拍云';
+                case 'yunxin':
+                    return '云信';
+                case "kuaidiniao":
+                    return '快递鸟';
+                default:
+            }
+        }
+    });
+})(jQuery);
+//设置滚动条
+function nicescroll(dom, child) {
+    if ($(dom).hasClass("nicescroll")) {
+        $(dom).getNiceScroll().show();
+        $(dom).getNiceScroll().resize();
+    } else {
+        if (!strisnull(child)) {
+            $(dom).niceScroll($(child), { cursorborder: "", cursorwidth: "5px", cursorcolor: "rgba(0, 0, 0,0.4)", scrollspeed: 80, bouncescroll: false });
+        } else {
+            $(dom).niceScroll({ cursorborder: "", cursorwidth: "5px", cursorcolor: "rgba(0, 0, 0,0.4)", scrollspeed: 80, bouncescroll: false });
+        }
+        $(dom).addClass("nicescroll");
+    }
+}
+//url变化监听器
+function urlchange(callback) {
+    callback();
+    if (('onhashchange' in window) && ((typeof document.documentMode === 'undefined') || document.documentMode == 8)) {
+        // 浏览器支持onhashchange事件
+        window.onhashchange = callback;  // TODO，对应新的hash执行的操作函数
+    } else {
+        // 不支持则用定时器检测的办法
+        setInterval(function () {
+            // 检测hash值或其中某一段是否更改的函数， 在低版本的iE浏览器中通过window.location.hash取出的指和其它的浏览器不同，要注意
+            var ischanged = isHashChanged();
+            if (ischanged) {
+                callback();  // TODO，对应新的hash执行的操作函数
+            }
+        }, 150);
+    }
+}
+//获取客户端信息
+function getfromclient() {
+    var version = navigator.userAgent;
+    var os = "";
+    var browser = "";
+    if (version.indexOf("Mac") != -1) {
+        os = "Mac";
+    } else if (version.indexOf("SunOS") != -1) {
+        os = "SunOS";
+    } else if (version.indexOf("Linux") != -1) {
+        os = "Linux";
+    } else if (version.indexOf("Unix") != -1) {
+        os = "Unix";
+    } else if (version.indexOf("NT 5.1") != -1) {
+        os = "Windows XP";
+    } else if (version.indexOf("NT 5.2") != -1) {
+        os = "Windows Server 2003";
+    } else if (version.indexOf("NT 6.0") != -1) {
+        os = "Windows Vista/Server 2008";
+    } else if (version.indexOf("NT 6.1") != -1) {
+        os = "Windows 7";
+    } else if (version.indexOf("NT 6.2") != -1) {
+        os = "Windows 8";
+    } else if (version.indexOf("NT 6.3") != -1) {
+        os = "Windows 8.1";
+    } else if (version.indexOf("NT 10") != -1) {
+        os = "Windows 10";
+    }
+    if (version.indexOf("UBrowser") != -1) {
+        browser = "UC浏览器";
+    } else if (version.indexOf("Edge") != -1) {
+        browser = "Edge";
+    } else if (version.indexOf("QQ") != -1) {
+        browser = "QQ浏览器";
+    } else if (version.indexOf("360") != -1) {
+        browser = "360浏览器";
+    } else if (version.indexOf("Trident") != -1) {
+        browser = "IE";
+    } else if (version.indexOf("Chrome") != -1) {
+        browser = "Chrome";
+    }
+    return os + "," + browser;
+}
+//是否手机访问
+function isMobile() {
+    var userAgentInfo = navigator.userAgent;
+    var mobileAgents = ["Android", "iPhone", "SymbianOS", "Windows Phone", "iPad", "iPod"];
+
+    var mobile_flag = false;
+
+    //根据userAgent判断是否是手机
+    for (var v = 0; v < mobileAgents.length; v++) {
+        if (userAgentInfo.indexOf(mobileAgents[v]) > 0) {
+            mobile_flag = true;
+            break;
+        }
+    }
+
+    //根据屏幕分辨率判断是否是手机
+    if (mobile_flag == false) {
+        var screen_width = $(window).width();
+        var screen_height = window.screen.height;
+
+        if (screen_width < 500) {
+            mobile_flag = true;
+        }
+    }
+
+    return mobile_flag;
+}
+//是否安卓app
+function isAndroid() {
+    var u = navigator.userAgent;
+    return u.indexOf('hui_android') > -1;
+}
+//是否iosApp
+function isiOS() {
+    var u = navigator.userAgent;
+    var result = u.indexOf('hui_ios') > -1;
+    //偶尔在前端获取不到ios的useragent信息，通过后端传
+    if (!result && $(".hd_isios").length > 0) {
+        return $(".hd_isios").val() == "1"
+    } else {
+        return result;
+    }
+}
+//是否桌面访问
+function isWin() {
+    var u = navigator.userAgent;
+    return u.indexOf('hui_win') > -1;
+}
+//是否app访问
+function isApp() {
+    return isAndroid() || isiOS();
+}
+//是否在微信内访问
+function isWeichat() {
+    var u = navigator.userAgent.toLowerCase();
+    return u.indexOf('micromessenger') > -1;
+}
+//是否小程序访问 
+function ismini() {
+    return window.__wxjs_environment === 'miniprogram';
+}
+//跳转到IM会话列表
+function openIMList() {
+    if (ismini()) {
+        wx.miniProgram.navigateTo({
+            url: '/pages/recentchat/recentchat'
+        });
+    }
+}
+//跳转到IM链接
+function openIM(uid, objectid, objecttype) {
+    var param = "";
+    if (!strisnull(objectid) && objectid > 0) {
+        param += "&objectid=" + objectid;
+    }
+    if (!strisnull(objecttype)) {
+        param += "&objecttype=" + objecttype;
+    }
+
+    if (isApp()) {
+        location.href = "huiapp://open?im=" + uid + param;
+    } else if (ismini()) {
+        wx.miniProgram.navigateTo({
+            url: '/partials/chating/chating?type=p2p&chatTo=' + uid + '&objecttype=' + objecttype + '&objectid=' + objectid
+        });
+    } else if (isWin()) {
+        window.open(xh.imhost + "?userid=" + uid + param);
+    }
+}
+//获取浏览器参数a和b
+function getQueryString(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+    var r = window.location.search.substr(1).match(reg);
+
+    if (r != null) {
+        return URLDecode(URLDecode(r[2]));
+    }
+    return null;
+}
+//获取指定Url的指定参数
+function getQueryStringForUrl(url, name) {
+    var reg = new RegExp("(^|&|\\?)" + name + "=([^&]*)(&|$)", "i");
+    var r = url.substr(1).match(reg);
+
+    if (r != null) {
+        return URLDecode(URLDecode(r[2]));
+    }
+    return null;
+}
+//只获取年月日部分
+function timeDate(time, format, addday) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    //为兼容safari，-要转成/
+    time = time.replace(/-/gm, '/');
+    var date = new Date(time);
+    if (addday != null && addday != 0) {
+        date = new Date(date.setDate(date.getDate() + addday));
+    }
+    if (format == 1)
+        return (date.getFullYear() + '').substr(2) + "年" + PrefixInteger(date.getMonth() + 1, 2) + "月" + PrefixInteger(date.getDate(), 2) + "日";
+    else if (format == 2)
+        return (date.getFullYear() + '').substr(2) + "-" + PrefixInteger(date.getMonth() + 1, 2) + "-" + PrefixInteger(date.getDate(), 2);
+    else
+        return (date.getFullYear() + '').substr(2) + "/" + PrefixInteger(date.getMonth() + 1, 2) + "/" + PrefixInteger(date.getDate(), 2);
+}
+//时间格式（倒计时，过早日期以年月日形式展示）
+function timeFormat(time) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    var datenow = new Date();
+    var date = new Date(time);
+
+    if (datenow.getFullYear() > date.getFullYear())
+        return (date.getFullYear() + '').substr(2) + "年" + PrefixInteger(date.getMonth() + 1, 2) + "月" + PrefixInteger(date.getDate(), 2) + "日&nbsp;" + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+    else if (datenow.getDate() - date.getDate() > 2 || datenow.getMonth() > date.getMonth())
+        return PrefixInteger(date.getMonth() + 1, 2) + "月" + PrefixInteger(date.getDate(), 2) + "日&nbsp;" + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+    else if (datenow.getDate() - date.getDate() == 2)
+        return "前天" + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+    else if (datenow.getDate() - date.getDate() == 1)
+        return "昨天" + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+    else if (datenow.getDate() == date.getDate())
+        return PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+    else
+        return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+}
+//时间格式（倒计时，过早日期以/形式展示）
+function timeFormat2(time) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    var datenow = new Date();
+    var date = new Date(time);
+
+    if (datenow.getFullYear() > date.getFullYear())
+        return (date.getFullYear() + '').substr(2) + "/" + PrefixInteger(date.getMonth() + 1, 2) + "/" + PrefixInteger(date.getDate(), 2);
+    else if (datenow.getDate() - date.getDate() > 2 || datenow.getMonth() > date.getMonth())
+        return PrefixInteger(date.getMonth() + 1, 2) + "/" + PrefixInteger(date.getDate(), 2);
+    else if (datenow.getDate() - date.getDate() == 2)
+        return "前天";
+    else if (datenow.getDate() - date.getDate() == 1)
+        return "昨天";
+    else if (datenow.getDate() == date.getDate())
+        return PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2);
+}
+//标准时间格式，yyyy-MM-dd HH:mm:ss
+function timeFormat3_One(time) {
+    //var datenow = new Date();
+    var date = new Date(time);
+
+    return (date.getFullYear() + '').substr(2) + "-" + PrefixInteger(date.getMonth() + 1, 2) + "-" + PrefixInteger(date.getDate(), 2) + " " + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2) + ":" + PrefixInteger(date.getSeconds());
+}
+//标准时间格式
+function timeFormat3(time, br) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    //因为有很多地方引用了 这个函数，而这个又错误的写了个重载，js没有重载这种东西。只能这么修复先。
+    if (arguments.length == 1) {
+        return timeFormat3_One(time);
+    }
+    var date = new Date(time);
+    return date.getFullYear() + "-" + PrefixInteger(date.getMonth() + 1, 2) + "-" + PrefixInteger(date.getDate(), 2) + (br ? "<br>" : " ") + PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2) + ":" + PrefixInteger(date.getSeconds(), 2)
+}
+//只显示倒计时
+function timeFormat4(time) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ").replace(/-/g,"/");
+    }
+    var datenow = new Date();
+    var date = new Date(time);
+
+    if (datenow.getFullYear() > date.getFullYear())
+        return (datenow.getFullYear() - date.getFullYear()) + "年前";
+    else if (datenow.getMonth() > date.getMonth())
+        return (datenow.getMonth() - date.getMonth()) + "月前";
+    else if (datenow.getDate() > date.getDate())
+        return (datenow.getDate() - date.getDate()) + "天前";
+    else if (datenow.getHours() > date.getHours())
+        return (datenow.getHours() - date.getHours()) + "小时前";
+    else if (datenow.getMinutes() > date.getMinutes())
+        return (datenow.getMinutes() - date.getMinutes()) + "分钟前";
+    else if (datenow.getSeconds() > date.getSeconds())
+        return (datenow.getSeconds() - date.getSeconds()) + "秒前";
+}
+//只显示日期部分
+function timeFormatDate(time, addday) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    var date = new Date(time);
+    if (addday != null && addday != 0) {
+        date = new Date(date.setDate(date.getDate() + addday));
+    }
+    return date.getFullYear() + "-" + PrefixInteger(date.getMonth() + 1, 2) + "-" + PrefixInteger(date.getDate(), 2);
+}
+//只显示时间部分
+function timeFormatTime(time) {
+    if (typeof time == "string" && time.indexOf("T") > -1) {
+        time = time.replace("T", " ");
+    }
+    var date = new Date(time);
+    return PrefixInteger(date.getHours(), 2) + ":" + PrefixInteger(date.getMinutes(), 2) + ":" + PrefixInteger(date.getSeconds(), 2);
+}
+//倒计时
+var public_interval = null;
+function countdown(buytime, calblack, stopcallback) {
+    if (buytime <= 0) return;
+    //避免累加，清掉前一个
+    if (public_interval != null) {
+        clearInterval(public_interval);
+    }
+    public_interval = setInterval(function () {
+        if (buytime <= 0) {
+            setTimeout(function () {
+                if (stopcallback != null) {
+                    stopcallback();
+                } else {
+                    location.reload();
+                }
+            }, 200);
+        } else {
+            buytime = buytime - 1;
+            if (calblack != null && $.isFunction(calblack))
+                calblack(SecondToDate(buytime));
+        }
+    }, 1000);
+}
+function cleardountdown() {
+    clearInterval(public_interval);
+}
+//倒计时秒数转日期
+function SecondToDate(time, type) {
+    var dd = parseInt(time / 60 / 60 / 24, 10);
+    var hh = parseInt(time / 60 / 60 % 24, 10);//计算剩余的小时数  
+    var mm = parseInt(time / 60 % 60, 10);//计算剩余的分钟数  
+    var ss = parseInt(time % 60, 10);//计算剩余的秒数
+    hh = checkTime(hh);
+    mm = checkTime(mm);
+    ss = checkTime(ss);
+
+    if (strisnull(type))
+        return dd + "天" + hh + "时" + mm + "分" + ss + "秒";
+    else if (type == "dd")
+        return dd + "天";
+    else if (type == "hh")
+        return dd + "天" + hh + "时";
+    else if (type == "mm")
+        return dd + "天" + hh + "时" + mm + "分";
+}
+function checkTime(i) {
+    if (i < 10) {
+        i = "0" + i;
+    }
+    return i;
+}
+//秒数转为时间
+function SecondToTime(time) {
+    var hour = 0;
+    var minute = 0;
+    var second = 0;
+    if (time >= 60) {
+        minute = Math.floor(time / 60);
+        if (minute >= 60) {
+            hour = Math.floor(minute / 60);
+            minute = minute % 60;
+        }
+    }
+    second = time % 60;
+    return padleft(hour, 2) + ":" + padleft(minute, 2) + ":" + padleft(second, 2);
+}
+//将时间戳转成日期
+function UnixToDate(timestamp, format) {
+    var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+    Y = date.getFullYear();
+    M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1);
+    D = date.getDate();
+    h = date.getHours();
+    m = date.getMinutes();
+    s = date.getSeconds();
+
+    if (format == 0) {
+        return date;
+    }
+    else if (format == 1)
+        return Y + '年' + M + '月' + D + '时' + h + '分' + m + '秒' + s;
+    else
+        return Y + '-' + M + '-' + D + ' ' + h + ':' + m + ':' + s;
+}
+//将时间转换成时间戳
+function DateToUnix(time) {
+    var str = time.indexOf('-') > -1 ? '-' : '/';
+
+    var f = time.indexOf('T') > -1 ? time.split('T', 2) : time.split(' ', 2);
+    var d = (f[0] ? f[0] : '').split(str, 3);
+    var t = (f[1] ? f[1] : '').split(':', 3);
+    return (new Date(
+        parseInt(d[0], 10) || null,
+        (parseInt(d[1], 10) || 1) - 1,
+        parseInt(d[2], 10) || null,
+        parseInt(t[0], 10) || null,
+        parseInt(t[1], 10) || null,
+        parseInt(t[2], 10) || null
+    )).getTime() / 1000;
+}
+//获取周
+function getweek(date) {
+    var day = new Date(Date.parse(date));   //需要正则转换的则 此处为 ： var day = new Date(Date.parse(date.replace(/-/g, '/')));
+    var today = new Array('周日', '周一', '周二', '周三', '周四', '周五', '周六');
+    return today[day.getDay()];
+}
+//获取当前时间戳
+function gettimestamp() {
+    return Date.parse(new Date());
+}
+//调用日期时间控件
+function datetimeshow(defdate, dom) {
+    laydate.render({
+        elem: dom,
+        type: 'datetime',
+        value: defdate
+    });
+}
+//调用日期控件
+function dateshow(defdate, dom) {
+    laydate.render({
+        elem: dom,
+        value: defdate
+    });
+}
+//调用时间控件
+function timeshow(deftime, dom) {
+    laydate.render({
+        elem: dom,
+        type: 'time',
+        value: deftime
+    });
+}
+//数字前面补0
+function PrefixInteger(num, length) {
+    return (Array(length).join('0') + num).slice(-length);
+}
+//禁用按钮
+function btndis(dom, word) {
+    dom.attr("data-state", "1");
+    if (dom[0].tagName == "INPUT" || dom[0].tagName == "BUTTON")
+        dom.attr("disabled", "disabled").addClass("btn_disabled");
+    else
+        dom.attr("data-onclick", dom.attr("onclick")).removeAttr("onclick");
+
+    if (dom[0].tagName != "IMG") {
+        dom.addClass("btn_disabled");
+        dom.addClass("btn_gray");
+    }
+    if (dom[0].tagName == "INPUT")
+        dom.val(word)
+    else
+        dom.html(word);
+}
+//开启按钮
+function btnopen(dom, word) {
+    dom.removeAttr("data-state");
+    dom.removeAttr("disabled");
+    if (dom[0].tagName == "INPUT" || dom[0].tagName == "BUTTON")
+        dom.removeAttr("disabled").removeClass("btn_disabled");
+    else
+        dom.attr("onclick", dom.attr("data-onclick")).removeAttr("data-onclick").removeClass("btn_disabled");
+
+    if (dom[0].tagName != "IMG") {
+        dom.removeClass("btn_disabled");
+        dom.removeClass("btn_gray");
+    }
+    if (dom[0].tagName == "INPUT")
+        dom.val(word)
+    else
+        dom.html(word);
+}
+//在光标处插入内容
+function innerCon(html, selectPastedContent) {
+    var sel, range;
+    if (window.getSelection) {
+        // IE9 and non-IE
+        sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            range = sel.getRangeAt(0);
+            range.deleteContents();
+
+            var el = document.createElement("div");
+            el.innerHTML = html;
+            var frag = document.createDocumentFragment(), node, lastNode;
+            while ((node = el.firstChild)) {
+                lastNode = frag.appendChild(node);
+            }
+            var firstNode = frag.firstChild;
+            range.insertNode(frag);
+
+            // Preserve the selection
+            if (lastNode) {
+                range = range.cloneRange();
+                range.setStartAfter(lastNode);
+                if (selectPastedContent) {
+                    range.setStartBefore(firstNode);
+                } else {
+                    range.collapse(true);
+                }
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    } else if ((sel = document.selection) && sel.type != "Control") {
+        // IE < 9
+        var originalRange = sel.createRange();
+        originalRange.collapse(true);
+        sel.createRange().pasteHTML(html);
+        if (selectPastedContent) {
+            range = sel.createRange();
+            range.setEndPoint("StartToStart", originalRange);
+            range.select();
+        }
+    }
+}
+//过滤格式，返回纯文本
+function replaceStr(chr, clearn) {
+    if (chr == null || chr == "") {
+        return "";
+    }
+    re = new RegExp("<[^>]*>", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp("<", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp(">", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp("\"", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp("</*script[^>]*>", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp("</*link[^>]*>", "g");
+    chr = chr.replace(re, "");
+    re = new RegExp("&nbsp;", "g");
+    chr = chr.replace(re, "");
+    chr = chr.trim();
+    if (clearn) {
+        chr = chr.replace(re, "");
+        re = new RegExp("\n", "g");
+        chr = chr.replace(re, "");
+        re = new RegExp("\r", "g");
+        chr = chr.replace(re, "");
+        re = new RegExp("\t", "g");
+    }
+    return chr;
+}
+//文本中的链接转换为a标签
+function textTolink(str) {
+    var regex = /(((http|ftp|https):\/\/)(([a-zA-Z0-9\._-]+\.[a-zA-Z]{2,6})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))(:[0-9]{1,4})*(\/[a-zA-Z0-9\&%_\.\/-~-]*)?)/g;
+    return str.replace(regex, "<a href=\"$1\">网页链接</a>");
+}
+//判断字符是否为空
+function strisnull(str) {
+    str = str + ''; //转成字符串
+    return str == null || str == "" || str == "undefined" || str == "null";
+}
+//检测是否有非法字符
+function checkBanStr(str) {
+    var regex = /[;,']/;
+    return regex.test(str);
+}
+//判断是否价格格式
+function checkPrice(str) {
+    var regex = /(^[1-9]\d*(\.\d{1,2})?$)|(^[0]{1}(\.\d{1,2})?$)/;
+    return regex.test(str);
+}
+//判断是否整数
+function checknum(str) {
+    var regex = /-?[1-9]\d*/;
+    return regex.test(str);
+}
+//光标移到最后div(contenteditable = "true")
+function po_Last_Div(obj) {
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(obj[0]);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+//将file转换成可预览的url
+function getimgupload(file) {
+    var url = null;
+    if (window.createObjectURL != undefined) { // basic
+        url = window.createObjectURL(file);
+    }
+    else if (window.URL != undefined) {
+        // mozilla(firefox)
+        url = window.URL.createObjectURL(file);
+    }
+    else if (window.webkitURL != undefined) {
+        // webkit or chrome
+        url = window.webkitURL.createObjectURL(file);
+    }
+    return url;
+}
+// 处理过长的字符串，截取并添加省略号
+function strlength(pStr, pLen) {
+    if (strisnull(pStr)) return;
+    var _ret = cutString(pStr, pLen);
+    var _cutFlag = _ret.cutflag;
+    var _cutStringn = _ret.cutstring;
+
+    if ("1" == _cutFlag) {
+        return _cutStringn + "...";
+    } else {
+        return _cutStringn;
+    }
+}
+//取得指定长度的字符串
+function cutString(pStr, pLen) {
+    // 原字符串长度
+    var _strLen = pStr.length;
+    var _tmpCode;
+    var _cutString;
+    // 默认情况下，返回的字符串是原字符串的一部分
+    var _cutFlag = "1";
+    var _lenCount = 0;
+    var _ret = false;
+    if (_strLen <= pLen / 2) {
+        _cutString = pStr;
+        _ret = true;
+    }
+    if (!_ret) {
+        for (var i = 0; i < _strLen; i++) {
+            if (isFull(pStr.charAt(i))) {
+                _lenCount += 2;
+            } else {
+                _lenCount += 1;
+            }
+
+            if (_lenCount > pLen) {
+                _cutString = pStr.substring(0, i);
+                _ret = true;
+                break;
+            } else if (_lenCount == pLen) {
+                _cutString = pStr.substring(0, i + 1);
+                _ret = true;
+                break;
+            }
+        }
+    }
+
+    if (!_ret) {
+        _cutString = pStr;
+        _ret = true;
+    }
+
+    if (_cutString.length == _strLen) {
+        _cutFlag = "0";
+    }
+
+    return { "cutstring": _cutString, "cutflag": _cutFlag };
+}
+// 判断是否为全角
+function isFull(pChar) {
+    if ((pChar.charCodeAt(0) > 128)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+//将本地图片压缩再转成base64
+function dealImage(path, width, callback) {
+    var img = new Image();
+    img.src = path;
+    img.onload = function () {
+        var that = this;
+        // 默认按比例压缩
+        var w = that.width,
+            h = that.height,
+            scale = w / h;
+        w = width || w;
+        h = w / scale;
+        var quality = 0.7;  // 默认图片质量为0.7
+        //生成canvas
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        // 创建属性节点
+        var anw = document.createAttribute("width");
+        anw.nodeValue = w;
+        var anh = document.createAttribute("height");
+        anh.nodeValue = h;
+        canvas.setAttributeNode(anw);
+        canvas.setAttributeNode(anh);
+        ctx.drawImage(that, 0, 0, w, h);
+        // quality值越小，所绘制出的图像越模糊
+        var base64 = canvas.toDataURL('image/jpeg', quality);
+        base64 = base64.replace('data:image/jpeg;base64,', '');
+        // 回调函数返回base64的值
+        if (callback != null && $.isFunction(callback))
+            callback(base64);
+    }
+}
+//将base64转成file
+function convertBase64UrlToBlob(urlData) {
+    var bytes = window.atob(urlData.split(',')[1]);        //去掉url的头，并转换为byte  
+    //处理异常,将ascii码小于0的转换为大于0  
+    var ab = new ArrayBuffer(bytes.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < bytes.length; i++) {
+        ia[i] = bytes.charCodeAt(i);
+    }
+
+    return new Blob([ab], { type: 'image/jpg' });
+}
+//HTML编码
+function HTMLEncode(str) {
+    if (strisnull(str)) return '';
+    var s = "";
+    if (str.length == 0) return "";
+    s = str.replace(/&/g, "&amp;");
+    s = s.replace(/</g, "&lt;");
+    s = s.replace(/>/g, "&gt;");
+    s = s.replace(/\'/g, "&#39;");
+    s = s.replace(/\"/g, "&quot;");
+    return s;
+}
+//HTML解码
+function HTMLDecode(str) {
+    if (strisnull(str)) return '';
+    var s = "";
+    if (str.length == 0) return "";
+    s = str.replace(/&amp;/g, "&");
+    s = s.replace("&lt;", "<");
+    s = s.replace(/&gt;/g, ">");
+    s = s.replace(/&#39;/g, "'");
+    s = s.replace(/&quot;/g, "\"");
+    return s;
+}
+//url编码
+function URLEncode(url) {
+    return encodeURIComponent(url);
+}
+//url解码
+function URLDecode(url) {
+    return decodeURIComponent(url);
+}
+//生成随机数
+function getrandom(num) {
+    //x上限，y下限     
+    var x = 1;
+    var y = 0;
+
+    if (num > 1) {
+        x = '';
+        for (var i = 0; i < num; i++) {
+            x += "9";
+        }
+        x = parseInt(x);
+
+        y = '1';
+        for (var i = 0; i < num - 1; i++) {
+            y += "0";
+        }
+        y = parseInt(y);
+    }
+
+    var rand = parseInt(Math.random() * (x - y + 1) + y);
+    return rand;
+}
+//将文本框的内容转换成html格式
+function TextToHtml(text) {
+    if (strisnull(text)) return null;
+    text = text.replace(new RegExp("\n", "g"), "</p><p>");
+    text = text.replace(new RegExp("\t", "g"), "&nbsp;");
+    text = text.replace(new RegExp("\r", "g"), "");
+    return '<p>' + text + '</p>';
+}
+//将html格式转换成文本框
+function HtmlToText(html) {
+    if (strisnull(html)) return null;
+    html = html.replace(new RegExp("</p>\\s*<p[^>]*>", "g"), "\n");
+    html = html.replace(new RegExp("<div>", "g"), "");
+    html = html.replace(new RegExp("</div>", "g"), "");
+    html = html.replace(new RegExp("</p><p[^>]*>", "g"), "\n");
+    html = html.replace(new RegExp("<br/>", "g"), "\n");
+    html = html.replace(new RegExp("<br>", "g"), "\n");
+    html = html.replace(new RegExp("<p[^>]*>", "g"), "");
+    html = html.replace(new RegExp("</p>", "g"), "");
+    html = html.replace(new RegExp("&nbsp;", "g"), "\t");
+    return html;
+}
+//【表单里的子项】新增一项
+function _additemone(dom) {
+    if ($(dom).closest(".form_item_one").find("p").length >= 11) {
+        xh.alert("添加数量不能超过10"); return;
+    }
+    var html = $(dom).closest("p").prev();
+    var $html = $(html).clone();
+    $html.find("input[type=text]").val("");
+    $(dom).closest("p").before($html);
+}
+//【表单里的子项】删除一项
+function _removeitemone(dom) {
+    var prizecount = $(dom).closest(".form_item_one").find("p.item").length;
+    if (prizecount <= 1) { xh.alert("至少保留一项"); return; }
+
+    xh.confirm("确定要移除当前项吗？", function () {
+        $(dom).closest("p.item").remove();
+    });
+}
+//数字前面补0
+function padleft(num, n) {
+    return (Array(n).join(0) + num).slice(-n);
+}
+//全选反选
+function selall() {
+    //全选反选
+    $(document).on("click", ".ck_all", function () {
+        if (this.checked) {
+            $(".ck_one").prop("checked", true);
+            $(".ck_all").prop("checked", true);
+        } else {
+            $(".ck_one").prop("checked", false);
+            $(".ck_all").prop("checked", false);
+        }
+    });
+    $(document).on("click", ".ck_one", function () {
+        var all_ck = $(".ck_one");
+        for (var i = 0; i < all_ck.length; i++) {
+            if (!all_ck[i].checked) {
+                $(".ck_all").prop("checked", false);
+                return;
+            }
+        }
+        $(".ck_all").prop("checked", true);
+    });
+}
+//获取选中项集合
+function selids() {
+    var ids = new Array();
+    var ck_all = $(".ck_one");
+    for (var i = 0; i < ck_all.length; i++) {
+        if (ck_all[i].checked) {
+            ids.push(parseInt($(ck_all[i]).val()));
+        }
+    }
+    return ids;
+}
+//数组删除一项
+function arrayDel(array, name) {
+    for (var i = 0; i < array.length; i++) {
+        if (array[i] == name) {
+            array.splice(i, 1);
+            return;
+        }
+    }
+}
+//数组是否存在
+function arrayExists(array, name) {
+    for (var i = 0; i < array.length; i++) {
+        if (array[i] == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//表单图片上传
+function formupload(imgdom, imgbox, progressCallback, successCallback) {
+    xh.upload({
+        btndom: imgdom,
+        isone: true,
+        OnProgressOne: function (index, percent, dom) {
+            $(dom).siblings(".img_load").remove();
+            var height = $(dom).height();
+            //上传进度条
+            if (progressCallback == null) {
+                $(dom).after('<span class="img_load" style="margin-top:' + (height - 16) + 'px">' + percent + '%</span>');
+            } else {
+                progressCallback(percent);
+            }
+        },
+        OnSuccessOne: function (index, data, dom, basefile) {
+            $(dom).siblings(".img_load").html("加载中");
+            if (!strisnull(imgbox))
+                $(dom).src(data.url + imgbox);
+            else
+                $(dom).src(data.url + "_200x200.jpg");
+            $(dom).attr({ "data-src": data.url, "data-width": data.width, "data-height": data.height, "data-size": data.size });
+            $(dom).load(function () {
+                $(dom).siblings(".img_load").html("上传完成");
+            });
+            successCallback(data, basefile);
+        }
+    });
+}
+//批量上传图片，maxcount为最多可上传的图片，0为不限制
+function uploadlist(btndom, imgbox, tools, maxcount, callback) {
+    xh.upload({
+        isone: false,
+        btndom: btndom,
+        OnBegin: function (files) {
+            if (!strisnull(maxcount)) {
+                maxcount = parseInt(maxcount);
+                var selcount = $(imgbox).find("li").length + files.length;
+                if (maxcount > 0 && selcount > maxcount) {
+                    xh.alert('最多可以上传' + maxcount + '张图片，选择已超过' + (selcount - maxcount) + '张');
+                    return false;
+                }
+            }
+            var html = '';
+            for (var i = 0; i < files.length; i++) {
+                html += '<li id="' + files[i].id + '" ' + (!strisnull(tools) ? 'style="height: 150px;"' : '') + '><div class="item"><p class="loading"></p></div></li>';
+            }
+            $(imgbox).append(html);
+        },
+        OnProgressOne: function (id, progress) {
+            $("#" + id).find(".loading").html(progress + "%");
+            $("#" + id).find(".loading").css("width", progress + "%");
+        },
+        OnSuccessOne: function (id, img) {
+            $("#" + id).find(".item").append('<img class="over_pic" src="' + img.url + '_150x150.jpg" data-src="' + img.url + '" data-width="' + img.image_width + '" data-height="' + img.image_height + '" data-size="' + img.file_size + '"><a class="delete"></a>');
+            if (!strisnull(tools)) {
+                $("#" + id).find("img").load(function () {
+                    $(this).closest("li").append('<p class="tools">' + tools + '</p>');
+                });
+            }
+            $("#" + id).find(".loading").remove();
+        },
+        OnSuccess: function () {
+            if (callback != null && $.isFunction(callback))
+                callback();
+        }
+    });
+}
+//批量上传图片，maxcount为最多可上传的图片，0为不限制【h5】
+function uploadlisth5(btndom, maxcount, width_ver, callback) {
+    if (strisnull(width_ver)) {
+        width_ver = "_100x100.jpg";
+    }
+
+    var btnhtml = $(btndom).html();
+    $(document).on("click", ".piclist .delete", function () {
+        $(this).closest(".one").remove();
+    });
+    xh.upload({
+        isone: false,
+        btndom: btndom,
+        btnispic: true,
+        OnBegin: function (files) {
+            if (!strisnull(maxcount)) {
+                maxcount = parseInt(maxcount);
+                var selcount = $(btndom).closest(".piclist").find(".one").length + files.length - 1;
+                if (maxcount > 0 && selcount > maxcount) {
+                    xh.alert('最多可以上传' + maxcount + '张图片');
+                    return false;
+                }
+            }
+            //公共上传函数中会把上传按钮变成正在上传的文字状态，所以这里强行还原
+            btnopen($(btndom));
+            $(btndom).html(btnhtml);
+            if ($(btndom).find(".loading").length > 0) {
+                $(btndom).find(".loading").show();
+            } else {
+                $(btndom).append('<span class=\"loading\" style=\"width:100%; text-align:center; height: .2rem; position: absolute; top: 50%; left: 0px; margin-top: -.1rem; display:inline-block; font-size:12px;\">0%</span>');
+            }
+        },
+        OnProgressOne: function (id, progress) {
+            $(btndom).find(".loading").html(progress + "%");
+        },
+        OnSuccessOne: function (id, img) {
+            $(btndom).find(".loading").hide();
+
+            var pichtml = '<div class="box"><img class="pic" src="' + img.url + width_ver + '" data-src="' + img.url + '" data-width="' + img.image_width + '" data-height="' + img.image_height + '" data-size="' + img.file_size + '"></div>';
+
+            if (maxcount > 1) {
+                $(btndom).before('<div class="one">' + pichtml + '<a class="delete"></a></div>');
+            }
+            else {
+                $(btndom).html(pichtml);
+            }
+        },
+        OnSuccess: function () {
+            if (callback != null && $.isFunction(callback))
+                callback();
+        }
+    });
+}
+//IM上传图片
+function uploadIM(btndom, beginCallback, progressCallback, successCallback) {
+    var btnhtml = $(btndom).html();
+    $(document).on("click", ".piclist .delete", function () {
+        $(this).closest(".one").remove();
+    });
+    xh.upload({
+        isone: true,
+        btndom: btndom,
+        btnispic: true,
+        OnBegin: function (files) {
+            var file = files[0];
+            var path = getimgupload(file.file);
+            dealImage(path, 200, function (base64) {
+                beginCallback(base64);
+            });
+        },
+        OnProgressOne: function (id, progress) {
+            progressCallback(progress);
+        },
+        OnSuccessOne: function (id, img) {
+            successCallback(img);
+        }
+    });
+}
+//上传视频
+function uploadvideo(btndom, probox, videodom, maxsize, callback) {
+    xh.uploadvideo({
+        btndom: btndom,
+        maxsize: maxsize,
+        OnProgress: function (progress) {
+            if (!$(probox).is(":visible"))
+                $(probox).show();
+            if ($(videodom).is(":visible"))
+                $(videodom).hide();
+
+            var parent_width = $(probox).width();
+            var width = (parent_width * progress) / 100;
+            $(probox).html('<div class="upload_progress"><div class="upload_progress_in" style="width:' + width + 'px"></div></div><p class="word">已上传<i class="progress_math">' + progress + '</i>%</p>');
+        },
+        OnSuccess: function (data) {
+            $(videodom).show();
+            $(probox).hide();
+
+            $(videodom).html('<div class="videoFace video_pic"><i></i><img src="' + data.facesrc + '_720x405.jpg" data-src="' + data.facesrc + '" class="js_videoface" data-videourl="' + data.videourl + '" data-whenlong="' + data.whenlong + '" data-width="' + data.width + '" data-height="' + data.height + '" /></div><a class="js_newface f12 font_blue">更换封面</a>');
+
+            xh.upload({
+                btndom: ".js_newface",
+                isone: true,
+                OnProgressOne: function (index, percent, dom) {
+                    $(".js_newface").html(percent + "%");
+                },
+                OnSuccessOne: function (index, data, dom) {
+                    $(".js_newface").html("更换封面");
+                    $(".js_videoface").src(data.url + "_720x405.jpg");
+                    $(".js_videoface").attr("data-src", data.url);
+                }
+            });
+
+            //视频基本参数
+            var video = {
+                videourl: data.videourl,
+                whenlong: data.whenlong,
+                width: data.width,
+                height: data.height,
+                facesrc: data.facesrc
+            }
+            if (callback != null && $.isFunction(callback))
+                callback(video);
+        }
+    });
+}
+//上传视频h5
+function uploadvideoh5(btndom, maxsize, callback) {
+    var btnhtml = $(btndom).html();
+    xh.uploadvideo({
+        btndom: btndom,
+        maxsize: maxsize,
+        OnBegin: function () {
+            //公共上传函数中会把上传按钮变成正在上传的文字状态，所以这里强行还原
+            btnopen($(btndom));
+            $(btndom).html(btnhtml);
+            if ($(btndom).find(".loading").length > 0) {
+                $(btndom).find(".loading").show();
+            } else {
+                $(btndom).append('<span class=\"loading\" style=\"width:100%; text-align:center; height: .2rem; position: absolute; top: 50%; left: 0px; margin-top: -.1rem; display:inline-block; font-size:12px;\">0%</span>');
+            }
+        },
+        OnProgress: function (progress) {
+            $(btndom).find(".loading").html(progress + "%");
+        },
+        OnSuccess: function (data) {
+            $(btndom).html('<div class="box"><img class="pic" src="' + data.facesrc + '_720x405.jpg" data-src="' + data.facesrc + '" class="js_videoface" data-videourl="' + data.videourl + '" data-whenlong="' + data.whenlong + '" data-width="' + data.width + '" data-height="' + data.height + '"></div>');
+
+            //视频基本参数
+            var video = {
+                videourl: data.videourl,
+                whenlong: data.whenlong,
+                width: data.width,
+                height: data.height,
+                facesrc: data.facesrc
+            }
+            if (callback != null && $.isFunction(callback))
+                callback(video);
+        }
+    });
+}
+//发送验证码UI
+function sendcodeUI(btndom, phonedom, isnew) {
+    $(btndom).click(function () {
+        var this_0 = this;
+        var phone = null;
+        if ($(phonedom).length > 0)
+            phone = $(phonedom).val();
+        xh.sendcode(phone, isnew, function (data) {
+            if (data == true) {
+                btndis($(this_0));
+                var second = 60;
+                var time_0 = setInterval(function () {
+                    if (second <= 0) {
+                        btnopen($(this_0), "发送验证码");
+                        clearInterval(time_0);
+                    } else {
+                        $(this_0).html("等待" + second + "秒");
+                        second--;
+                    }
+                }, 1000);
+            }
+        });
+    });
+}
+//json数据转表格内容
+function jsontotable(title, data) {
+    var head = '<tr><th style="width:30px" class="tcen"><input type="checkbox" class="ck_all" value=""></th>';
+    for (var i = 0; i < title.length; i++) {
+        head += '<th style="width:' + title[i].width + 'px">';
+        if (!strisnull(title[i].order)) {
+            head += '<a onclick="orderby(\'' + title[i].order + '\')">';
+        }
+        head += title[i].name;
+        if (!strisnull(title[i].order)) {
+            head += '</a>';
+        }
+        head += '</th>';
+    }
+    head += '</tr>';
+    var html = ' <table class="table">';
+    html += '<thead>' + head + '</thead>';
+    html += '<tfoot>' + head + '</tfoot>';
+    html += '<tbody>';
+    if (data == null || data.length == 0) {
+        html += '<tr><td colspan="' + (title.length + 1) + '">' + xh.nodata + '</td></tr>';
+    } else {
+        for (var i = 0; i < data.length; i++) {
+            html += '<tr id="tbdata_' + data[i][0] + '" data-id="' + data[i][0] + '">';
+            html += '<td class="tcen"><input type="checkbox" class="ck_one" value="' + data[i][0] + '"></td>';
+            //index为0的用于作复选框的value
+            for (var j = 0; j < data[i].length; j++) {
+                if (data[i][j] instanceof Array) {
+                    html += '<td>';
+                    for (var k = 0; k < data[i][j].length; k++) {
+                        if (data[i][j][k] == null) continue;
+                        if (k > 0) {
+                            html += '&nbsp;&nbsp;|&nbsp;&nbsp;';
+                        }
+                        html += '<a class="' + data[i][j][k][1] + '" onclick="' + data[i][j][k][2] + '">' + data[i][j][k][0] + '</a>';
+                    }
+                    html += '</td>';
+                } else {
+                    if (!strisnull(data[i][j])) {
+                        html += '<td>' + data[i][j] + '</td>';
+                    } else {
+                        html += '<td></td>';
+                    }
+                }
+            }
+            html += '</tr>';
+        }
+    }
+    html += '</tbody></table>';
+    return html;
+}
+//去年字符串中所有空格
+function replaceTrim(str) {
+    var result;
+    result = str.replace(/(^\s+)|(\s+$)/g, "");
+    result = result.replace(/\s/g, "");
+    return result;
+}
+//移除表格中的指定一行
+function removetabletr(ids) {
+    for (var i = 0; i < ids.length; i++) {
+        $("#tbdata_" + ids[i]).remove();
+    }
+}
+//后台分页，页数来自url，包含上下按钮
+function tablepage(rowcount, pagerow, btn) {
+    $(".page_box").remove();
+
+    var html = '<div class="page_box">';
+    if (btn != null && btn.length > 0) {
+        for (var i = 0; i < btn.length; i++) {
+            html += '<a class="fl mr20 ' + btn[i][1] + '" onclick="' + btn[i][2] + '">' + btn[i][0] + '</a>';
+        }
+    }
+    var pagecount = Math.floor(rowcount / pagerow) + (rowcount % pagerow > 0 ? 1 : 0);
+    if (pagecount > 1) {
+        var pagename = window.location.href;
+        var pageindex = getQueryString("p");
+
+        //url中页数参数
+        if (!strisnull(pageindex)) {
+            pagename = pagename.replace("p=" + pageindex, "p=*").replace("&p=" + pageindex, "&p=*");
+        } else {
+            pageindex = 1;
+            if (pagename.indexOf('?') == -1)
+                pagename += "?p=*";
+            else
+                pagename += "&p=*";
+        }
+        pageindex = parseInt(pageindex);
+
+        html += '<p class="page fr">';
+
+        if (pageindex > 1) {
+            html += '<a href="' + pagename.replace("*", "1") + '">首页</a>';
+            html += '<a href="' + pagename.replace("*", pageindex - 1) + '">上一页</a>';
+        }
+        if (pagecount <= 10) {
+            for (var i = 0; i < pagecount; i++) {
+                if (pageindex == i + 1) {
+                    html += '<span>' + pageindex + '</span>';
+                } else {
+                    html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                }
+            }
+        } else {
+            if (pageindex <= 5) {
+                for (var i = 0; i < 10; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else if (pageindex >= (pagecount - 5)) {
+                for (var i = pagecount - 10; i < pagecount; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else {
+                for (var i = pageindex - 4; i < pageindex + 6; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            }
+        }
+        if (pageindex < pagecount) {
+            html += '<a href="' + pagename.replace("*", pageindex + 1) + '">下一页</a>';
+            html += '<a href="' + pagename.replace("*", pagecount) + '">尾页</a>';
+        }
+        html += '</p>';
+    }
+    html += '<span class="page_rowcount">共【' + rowcount + '】行数据</span>';
+    html += '</div>';
+    return html;
+}
+//前台分页，页数来自url
+function tablepage2(rowcount, pagerow) {
+    var html = '';
+    pageindex = getQueryString("p");
+    rowcount = parseInt(rowcount);
+    pagerow = parseInt(pagerow);
+
+    var pagename = window.location.href;
+    if (!strisnull(pageindex)) {
+        pagename = pagename.replace("?p=" + pageindex, "?p=*").replace("&p=" + pageindex, "&p=*");
+    } else {
+        pageindex = 1;
+        if (pagename.indexOf('?') == -1)
+            pagename += "?p=*";
+        else
+            pagename += "&p=*";
+    }
+
+    pageindex = parseInt(pageindex);
+
+    var pagecount = Math.floor(rowcount / pagerow) + (rowcount % pagerow > 0 ? 1 : 0);
+    if (pagecount > 1) {
+        if (pageindex > 1) {
+            html += '<a href="' + pagename.replace("*", pageindex - 1) + '"><</a>';
+        }
+        if (pagecount <= 10) {
+            for (var i = 0; i < pagecount; i++) {
+                if (pageindex == i + 1) {
+                    html += '<span>' + pageindex + '</span>';
+                } else {
+                    html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                }
+            }
+        } else {
+            if (pageindex <= 5) {
+                for (var i = 0; i < 10; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else if (pageindex >= (pagecount - 5)) {
+                for (var i = pagecount - 10; i < pagecount; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else {
+                for (var i = pageindex - 4; i < pageindex + 6; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a href="' + pagename.replace("*", i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            }
+        }
+        if (pageindex < pagecount) {
+            html += '<a href="' + pagename.replace("*", pageindex + 1) + '">></a>';
+        }
+    }
+    return html;
+}
+//ajax分页，url保持不变
+function pageajax(dom, pageindex, rowcount, pagerow, callback) {
+    var html = '';
+    pageindex = parseInt(pageindex);
+    rowcount = parseInt(rowcount);
+    pagerow = parseInt(pagerow);
+
+    var pagecount = Math.floor(rowcount / pagerow) + (rowcount % pagerow > 0 ? 1 : 0);
+    if (pagecount > 1) {
+        if (pageindex > 1) {
+            html += '<a data-page="' + (pageindex - 1) + '"><</a>';
+        }
+        if (pagecount <= 10) {
+            for (var i = 0; i < pagecount; i++) {
+                if (pageindex == i + 1) {
+                    html += '<span>' + pageindex + '</span>';
+                } else {
+                    html += '<a data-page="' + (i + 1) + '">' + (i + 1) + '</a>';
+                }
+            }
+        } else {
+            if (pageindex <= 5) {
+                for (var i = 0; i < 10; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a data-page="' + (i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else if (pageindex >= (pagecount - 5)) {
+                for (var i = pagecount - 10; i < pagecount; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a data-page="' + (i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            } else {
+                for (var i = pageindex - 4; i < pageindex + 6; i++) {
+                    if (pageindex == i + 1) {
+                        html += '<span>' + pageindex + '</span>';
+                    } else {
+                        html += '<a data-page="' + (i + 1) + '">' + (i + 1) + '</a>';
+                    }
+                }
+            }
+        }
+        if (pageindex < pagecount) {
+            html += '<a data-page="' + (pageindex + 1) + '">></a>';
+        }
+    }
+    $(dom).html(html);
+
+    $(dom).find("a").unbind("click");
+    $(dom).find("a").bind("click", function () {
+        callback($(this).attr("data-page"));
+    });
+}
+//富文初始化
+function editorinit() {
+    var tools = null;
+    if (isMobile()) {
+        tools = ['title', 'bold', 'italic', 'image'];
+    } else {
+        tools = ['title', 'bold', 'italic', 'underline', 'strikethrough', '|', 'ol', 'ul', 'blockquote', 'link', 'image'];
+    }
+    editor = new Simditor({
+        textarea: $('#editor'),
+        toolbar: tools,
+        toolbarFloat: true,
+        upload: {
+            url: "/Home/UploadPic",
+            fileKey: "Filedata",
+            connectionCount: 5,
+            leaveConfirm: "图片正在上传，你确定要关闭？"
+        },
+        pasteImage: true,
+        cleanPaste: false
+    });
+}
+//统计格子宽度
+function statisticcell() {
+    var tran = $(".statistic_cell .tran");
+    for (var i = 0; i < tran.length; i++) {
+        var count = $(tran[i]).find(".item").length;
+        $(tran[i]).find(".item").width("calc(100% / " + count + " - 1px)");
+        $(tran[i]).find(".item:last-child").width("calc(100% / " + count + ")");
+    }
+}
+//下载Excel
+function downloadexcel(file, filename) {
+    //为避免被浏览器识别为文件，.进行手动编码
+    file = file.replace(new RegExp('\\.', 'g'), '%dot%');
+    window.open(xh.publichost + "/download?file=" + URLEncode(file) + (!strisnull(filename) ? "&filename=" + URLEncode(filename) : ""));
+}
+//视频播放器
+function videoplay(dom, face, url, width, height, havedownload, autoplay) {
+    var suffix = url.substr(url.lastIndexOf('.') + 1);
+    if (suffix.indexOf("?") > -1) {
+        suffix = suffix.substr(0, suffix.indexOf("?"));
+    }
+    var html = '';
+
+    if (width == 0) {
+        width = $(dom).closest("div").width();
+        height = width * 0.5625;
+    }
+    var id = 'video_' + new Date().getTime(); //用时间戳作为唯一ID
+    if (suffix == "mp4") {
+        html = '<video id="' + id + '" class="video-js vjs-default-skin vjs-big-play-centered" controls ' + (autoplay ? 'autoplay' : '') + ' preload="none" width="' + width + '" height="' + height + '" ' + (strisnull(face) ? '' : 'poster="' + face + '_720x405.jpg"') + '><source src="' + url + '" type="video/mp4" /></video>';
+        html += '<script>var player = videojs("#' + id + '", { controlBar: { volumePanel: { inline: false } } });</script>';
+    } else {
+        html = '<p class="data_null">视频正在转码中，稍后再播放</p>';
+    }
+    $(dom).html(html);
+
+    if (havedownload == false) {
+        $("#" + id).bind("contextmenu", function () { return false; });
+    }
+}
+
+$(function () {
+    if (isMobile() == false) {
+        //回顶部按钮显示
+        $("body").append('<a id="reg_top" title="回顶部"></a>');
+        $(window).scroll(function () {
+            if ($(window).scrollTop() >= 800) {
+                $('#reg_top').fadeIn(400);
+            } else {
+                $('#reg_top').fadeOut(400);
+            }
+        });
+        $("#reg_top").click(function () {
+            $('html,body').animate({ scrollTop: "0px" }, 500);
+        });
+    }
+    //全选反选
+    selall();
+});

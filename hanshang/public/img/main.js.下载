@@ -1,0 +1,466 @@
+﻿
+//跳转到手机站点
+function gomobile(url) {
+    if (isMobile()) {
+        location.href = xh.mobilehost + "/" + url;
+    }
+}
+
+//商品列表
+var product = {
+    list: function (type, data, dom, from) {
+        var api = "";
+        if (type == "hot") {
+            api = "Product/GetProductListPublicForHot";
+        } else if (type == "default") {
+            api = "Product/GetProductListPublicForDefault";
+        } else if (type == "relevant") {
+            api = "Product/GetProductListPublicForRelevant";
+        } else {
+            api = "Product/GetProductListPublic";
+        }
+        xh.get(api, data, function (result, remark) {
+            data.role = xh.role.user;
+            if (type == "default") {
+                product.htmldom(result.girl, ".js_girl", from);
+                product.htmldom(result.boy, ".js_boy", from);
+                product.htmldom(result.hys, ".js_hys", from);
+                product.htmldom(result.other, ".js_other", from);
+            } else {
+                product.htmldom(result, dom, from);
+                if (type == "list" || type == "shop") {
+                    $(".js_page").html(tablepage2(remark.count, data.count));
+                }
+            }
+            if ($(".js_datacount").length > 0) {
+                $(".js_datacount").html(remark.count);
+            }
+        }, null, true);
+    },
+    htmldom: function (list, dom, from, keyword) {
+        if (strisnull(keyword)) {
+            keyword = "";
+        }
+        if (list != null && list.length > 0) {
+            var html = '';
+            var linkparam = "from=" + from + "&k=" + keyword;
+
+            for (var i = 0; i < list.length; i++) {
+                if (from == xh.from.default) {
+                    html += '<li><a href="/product/' + list[i].ID + '?' + linkparam + '" target="_blank"><img src="' + list[i].FaceSrc + '_250x250.jpg" alt="' + list[i].Name + '"></a><p class="price"><i>￥</i>' + list[i].Price.toFixed(2) + '</p><p class="name"><a href="/product/' + list[i].ID + '?from=' + from + '" target="_blank">' + list[i].Name + '</a></p></li>';
+                } else {
+                    html += '<li class="post"><a href="/product/' + list[i].ID + '?' + linkparam + '" target="_blank"><img src="' + list[i].FaceSrc + '_250x250.jpg" alt="' + list[i].Name + '"></a><p class="price"><span class="buy">￥' + list[i].Price.toFixed(2) + '</span>';
+                    if (list[i].Price > list[i].BasePrice) {
+                        html += '<span class="old">￥' + list[i].BasePrice.toFixed(2) + '</span>';
+                    }
+                    html += '</p><p class="name long_hide"><a href="/product/' + list[i].ID + '?' + linkparam + '" target="_blank">' + list[i].Name + '</a></p>';
+                    if (from != xh.from.shopmain) {
+                        html += '<p class="other"><a class="shop" href="/shop/' + list[i].Shop.ID + '?from=' + from + '" target="' + list[i].Shop.ID + '">' + list[i].Shop.Name + '</a>';
+                        if (list[i].PostageID > 0) {
+                            html += '<i class="icon bg_purple ml5">包邮</i>';
+                        }
+                        html += '</p>';
+                    }
+                    html += '</li>';
+                }
+            }
+            $(dom).html(html);
+        }
+    }
+};
+var orders = {
+    data: null,
+    getmodel: function (id) {
+        if (orders.data != null && orders.data.length > 0) {
+            for (var i = 0; i < orders.data.length; i++) {
+                if (orders.data[i].ID == id) {
+                    return orders.data[i];
+                }
+            }
+        }
+    },
+    //刷新列表中单个数据
+    editmodel: function (id) {
+        xh.get("Orders/GetOrders", { "id": id, "role": xh.role.shop }, function (model) {
+            if (orders.data != null && orders.data.length == 1) {
+                location.reload();
+            } else {
+                //更新html
+                var html = orders.htmls(model, true);
+                $("#or_" + model.ID).html(html);
+            }
+
+            //更新数据
+            for (var i = 0; i < orders.data.length; i++) {
+                if (orders.data[i].ID == model.ID) {
+                    orders.data[i] = model;
+                    break;
+                }
+            }
+        }, null, true);
+    },
+    list: function (data) {
+        if (data == null) {
+            data = {};
+        }
+
+        data.role = xh.role.shop;
+        xh.get("Orders/GetOrdersList", data, function (list, remark) {
+            if (list != null) {
+                orders.data = list;
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                    html += orders.htmls(list[i], true);
+                }
+                $(".js_orders").html(html);
+            } else {
+                $(".js_orders").html(xh.nodata_tb);
+            }
+            pageajax(".js_page", data.page, remark.count, data.count, function (page) {
+                data.page = page;
+                orders.list(data);
+            });
+        }, null, true);
+    },
+    htmls: function (model, showbox) {
+        if (model != null) {
+
+            if (!model.AddressNames) {
+                model.AddressNames = "";
+            }
+
+            var html = '';
+            if (showbox == true) {
+                html += '<li id="or_' + model.ID + '">';
+            }
+            html += '<div class="userorders_productlist"><table><colgroup><col style="width: 50%"><col style="width: 12%"><col style="width: 16%"><col style="width: 10%"><col style="width: 10%"></colgroup><tbody class="shop"><tr><td><input type="checkbox" class="ck_one ml15" id="ckAll1" value="' + model.ID + '"><span class="weight ml20">' + timeFormat3(model.Datetime) + '</span>&nbsp;<span class="ml10">订单号：' + model.Number + '</span></td><td colspan="2"><a onclick="openIM(\'' + model.User.ID + '\', 0, null)"  target="im">' + model.User.NickName + '</a><a class="im" onclick="openIM(\'' + model.User.ID + '\', 0, null)" target="im"><i></i></a></td><td colspan="2"></td></tr></tbody><tbody class="product">';
+
+            html += orders.prolist(model, false);
+
+            html += '<tr><td colspan="5" class="ptb14"><span class="font_gray">收货信息：</span>' + model.Addressee + '，' + model.Phone + '，' + model.AddressNames.replace(',', '&nbsp;').replace(',', '&nbsp;') + '&nbsp;' + model.Street;
+            if (model.State == xh.ordersstate.pay) {
+                html += '&nbsp;&nbsp;&nbsp;&nbsp;<a class="font_blue iblock" onclick="ordersmanage._updateexpress(' + model.ID + ')">修改</a>&nbsp;&nbsp;&nbsp;&nbsp;<a class="font_blue iblock" onclick="ordersmanage._checkexpress(' + model.ID + ')">核对地址</a>';
+            }
+
+            html += '</td></tr><tr><td class="ptb14"><span class="font_gray">买家留言：' + (!strisnull(model.Remark) ? model.Remark : '') + '</span></td><td colspan="4"><span>备注：</span><span class="shopnote_read font_purple weight">' + (!strisnull(model.ShopNote) ? model.ShopNote : '') + '</span><a class="shopnote_click" onclick="ordersmanage._updatenote(this,' + model.ID + ')"></a><input type="text" class="shopnote_edit" value=""></td></tr></tbody></table></div>';
+
+            if (showbox == true) {
+                html += '</li>';
+            }
+
+            return html;
+        }
+    },
+    //订单商品列表
+    prolist: function (model, isdetails) {
+        var html = '';
+        var procount = model.OrdersProducts.length;
+        for (var i = 0; i < procount; i++) {
+            html += '<tr><td><div><a href="/product/' + model.OrdersProducts[i].ProductID + '" target="_blank"><img src="' + model.OrdersProducts[i].ProductFaceSrc + '_100x100.jpg" alt="GO_OrdersProduct"></a><p class="proname"><a href="/product/' + model.OrdersProducts[i].ProductID + '" target="_blank">' + model.OrdersProducts[i].ProductName + '</a></p>';
+            if (model.OrdersProducts[i].SkuID > 0) {
+                var skus = model.OrdersProducts[i].SkuName.split(',');
+                html += '<p class="font_gray f12">尺码：' + skus[0] + '</p>';
+                html += '<p class="font_gray f12">样式：' + skus[1] + '</p>';
+            }
+            html += '</div></td><td class="cen">';
+            html += '<p>￥ ' + model.OrdersProducts[i].ProductPrice.toFixed(2) + ' x ' + model.OrdersProducts[i].Count + '</p>';
+            if (model.OrdersProducts[i].Subtotal != model.OrdersProducts[i].BaseSubtotal) {
+                html += '<p class="f12 font_blue">(改价后：' + model.OrdersProducts[i].Subtotal.toFixed(2) + ')</p>';
+            }
+            console.log(model.OrdersProducts[i]);
+            if (model.OrdersProducts[i].RefundState > 0) {
+                html += '<p><a class="btn_null btn_s mt5" target="_blank" href="/redirect/refunddetails?opid=' + model.OrdersProducts[i].ID + '\">' + xh.oproductstatename(model.OrdersProducts[i].RefundState) + '</a></p>';
+            }
+            html += '</td>';
+            if (i == 0) {
+                html += '<td class="cen bono" rowspan="' + procount + '"><span class="font_gray f12">总价：￥ </span><span class="font_red_gou f18">' + model.SumPrice.toFixed(2) + '</span>';
+                if (model.PostagePrice > 0) {
+                    html += '<p class="f12 font_gray">(含邮费：' + model.PostagePrice.toFixed(2) + ')</p>';
+                }
+                html += '</td>';
+                if (isdetails == false) {
+                    html += '<td class="cen bono" rowspan="' + procount + '"><p class="tcen">';
+                    html += orders.state(model);
+                    html += '</p><p class="tcen mt10"><a href="/redirect/ordersdetails?id=' + model.ID + '" target="_blank" class="gray f12 mt10">订单详情</a></p></td>';
+                    html += '<td class="cen bono tools" rowspan="' + procount + '">';
+                    html += orders.btn(model, false);
+                    html += '</td>';
+                }
+            }
+            html += '</tr>';
+        }
+        return html;
+    },
+    //状态图标
+    state: function (model) {
+        var html = '<span data-state="' + model.State + '" class="mk_state ';
+        if (model.State == xh.ordersstate.add) {
+            html += 'badge_yellow';
+        } else if (model.State == xh.ordersstate.pay || model.State == xh.ordersstate.shippart) {
+            html += 'badge_gou';
+        } else if (model.State == xh.ordersstate.ship) {
+            html += 'badge_blue';
+        } else if (model.State == xh.ordersstate.success) {
+            html += 'badge_green';
+        } else if (model.State == xh.ordersstate.cancel) {
+            html += 'badge_gray';
+        }
+        html += '">' + xh.ordersstatename(model.State) + '</span>';
+        return html;
+    },
+    //操作按钮
+    btn: function (model, isdetails) {
+        var html = '';
+        var btnhtml = '';
+
+        if (isdetails) {
+            btnhtml += '<a class="btn_red_gou mr20" onclick="$</a>';
+        } else {
+            btnhtml += '<p><a onclick="$</a></p>';
+        }
+
+        if (model.State == xh.ordersstate.add) {
+            html += btnhtml.replace('$', 'ordersmanage._urgepay(' + model.ID + ')">催付款');
+            html += btnhtml.replace('$', 'ordersmanage._updateprice(' + model.ID + ')">改价');
+        }
+        if (model.State == xh.ordersstate.pay || model.State == xh.ordersstate.shippart) {
+            html += btnhtml.replace('$', 'ordersmanage._ship(' + model.ID + ')">发货');
+        }
+        if (model.State == xh.ordersstate.ship || model.State == xh.ordersstate.shippart) {
+            html += btnhtml.replace('$', 'ordersmanage._updateship(' + model.ID + ')">修改发货');
+        }
+        if (model.State == xh.ordersstate.ship) {
+            html += btnhtml.replace('$', 'ordersmanage._extend(' + model.ID + ')">延期收货');
+        }
+        if (model.State == xh.ordersstate.cancel) {
+            html += btnhtml.replace('$', 'ordersmanage._delete(\'' + xh.role.shop + '\',' + model.ID + ')">删除订单');
+        }
+        if (model.State == xh.ordersstate.success && model.UserComment == false) {
+            html += btnhtml.replace('$', 'window.open(\'/myshop/comment?id=' + model.ID + '\')">查看评论');
+        }
+        return html;
+    },
+    //倒计时文本
+    ticket: function (dom, model) {
+        if (model.State == xh.ordersstate.add) {
+            countdown(model.CountDown, function (time) {
+                $(dom).html('支付剩余时间：&nbsp;<span class="font_red_gou">' + time + '</span>');
+            });
+        } else if (model.State == xh.ordersstate.ship) {
+            countdown(model.CountDown, function (time) {
+                $(dom).html('将在&nbsp;<span class="font_red_gou">' + time + '</span>&nbsp;后自动确认收货');
+            });
+        }
+    },
+};
+//商家管理订单公共方法
+var ordersmanage = {
+    orders: null,
+    back: function () {
+        xh.closeform();
+        orders.editmodel(ordersmanage.orders.ID);
+    },
+    //催付款
+    _urgepay: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.post("Orders/UrgePay", { "id": id }, function (data) {
+            if (data == true) {
+                xh.dialog("已发送催付消息");
+            }
+        });
+    },
+    //改价
+    _updateprice: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.iframe('改价', "/myshop/level/updateprice", 800, 500);
+    },
+    //修改收货地址
+    _updateexpress: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.iframe('修改收货地址', "/myshop/level/updateexpress", 500, 310);
+    },
+    //核对收货地址
+    _checkexpress: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.confirm("确定要发送核对信息给用户？", function () {
+            xh.get("Orders/CheckOrdersAddress", { "id": id }, function (data) {
+                if (data == true) {
+                    xh.dialog("已发送核对信息给买家");
+                }
+            });
+        });
+    },
+    //发货
+    _ship: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.iframe('发货', "/myshop/level/ship", 720, 500);
+    },
+    //修改发货
+    _updateship: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.iframe('修改发货', "/myshop/level/updateship", 600, 520);
+    },
+    //延期收货
+    _extend: function (id) {
+        ordersmanage.orders = orders.getmodel(id);
+        xh.iframe('延期收货', "/myshop/level/extend", 360, 200);
+    },
+    //备注
+    _updatenote: function (dom, id) {
+        var input = $(dom).closest("tr").find(".shopnote_edit");
+        input.show().focus().val(input.val());
+        var btndom = $(dom).closest("td").find(".shopnote_read");
+        var textdom = $(dom).closest("td").find(".shopnote_edit");
+
+        btndom.hide();
+        $(dom).hide();
+        textdom.val(btndom.html().replace('<a></a>', ''));
+
+        //回车激发blur事件
+        textdom.unbind("keypress").bind("keypress", function (e) {
+            if (e.which == 13) {
+                textdom.blur();
+            }
+        });
+        //提交备注修改
+        textdom.unbind("blur").bind("blur", function () {
+            var text = textdom.val();
+            xh.post("Orders/UpdateOrdersShopNote", {
+                "id": id,
+                "shopnote": text
+            }, function (data) {
+                if (data == true) {
+                    textdom.hide();
+                    btndom.html(text).show();
+                    $(dom).show();
+                }
+            }, null, false);
+        });
+    },
+    //删除订单
+    _delete: function (role, id) {
+        xh.confirm("删除后订单无法恢复，确认要删除吗？", function () {
+            xh.post("Orders/DeleteOrders", { "role": role, "ids": id }, function (data) {
+                if (data == true) {
+                    xh.dialog("删除订单成功");
+                    setTimeout(function () {
+                        orders.list(orders.role, orders.t);
+                    }, 500);
+                }
+            });
+        });
+    },
+
+};
+//订单管理页面宽度
+function managewidth() {
+    var win_height = $(window).height();
+    var info_height = $(".js_manage").height();
+    $("body,.manage_box").css({ "background": "white", "height": win_height + "px" });
+    if (win_height < info_height) {
+        nicescroll(".manage_box", ".js_manage");
+    }
+}
+//退款功能
+var refund = {
+    //关闭退款
+    delete: function (id) {
+        xh.confirm("关闭退款后订单将恢复正常流程，确定要关闭吗？", function (data) {
+            xh.post("Refund/DeleteRefund", { "id": id }, function (data) {
+                if (data == true) {
+                    xh.alert("关闭成功");
+                    setTimeout(function (data) {
+                        location.reload();
+                    });
+                }
+            });
+        });
+    },
+    //发起申诉
+    appeal: function (id, state) {
+        xh.confirm("确定要" + (state == true ? "向汉服荟官方提起" : "撤销") + "申诉吗？", function (data) {
+            xh.post("Refund/RefundAppeal", { "id": id, "role": xh.role.shop, "state": state }, function (data) {
+                if (data == true) {
+                    xh.dialog("提交请求成功");
+                    setTimeout(function (data) {
+                        location.reload();
+                    }, 1000);
+                }
+            });
+        });
+    },
+    //处理退款
+    check: function (id, state, reason, addressid, callback) {
+        xh.confirm("确定要" + (state ? "同意" : "拒绝") + "退款吗？", function () {
+            xh.post("Refund/CheckRefund", {
+                "reason": reason,
+                "addressid": addressid,
+                "state": state,
+                "id": id,
+                "role": xh.role.shop
+            }, function (data) {
+                if (data == true) {
+                    xh.dialog("操作成功");
+                    setTimeout(function () {
+                        location.reload();
+                    }, 1000);
+                }
+            });
+        });
+    },
+    //确认收货
+    success: function (id, callback) {
+        xh.confirm("确认收货后款项将退回给买家，确定执行操作吗？", function () {
+            xh.post("Refund/RefundSuccess", { "id": id }, function (data) {
+                if (data == true) {
+                    xh.dialog("操作成功");
+                    if (callback != null && $.isFunction(callback))
+                        callback();
+                    else {
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1000);
+                    }
+                }
+            });
+        });
+    }
+}
+//收货地址
+function htmladdress(isselect, callback) {
+    xh.get("Express/GetUserAddressList", null, function (list) {
+        if (list != null && list.length > 0) {
+            var html = '';
+            for (var i = 0; i < list.length; i++) {
+                html += '<p>';
+                if (isselect == true) {
+                    html += '<input type="radio" name="rdaddress" id="radAdd_' + list[i].ID + '" value="' + list[i].ID + '" ';
+                    if (list[i].Default == true) {
+                        html += 'checked="checked"';
+                    }
+                    html += ' /><label for="radAdd_' + list[i].ID + '"><a>';
+                }
+                if (list[i].Default == true) {
+                    html += '<i class="badge_gou mr10">默认</i>';
+                }
+                html += list[i].AddressNames.replace(',', '&nbsp;').replace(',', '&nbsp;') + '&nbsp;' + list[i].Street + '，' + list[i].Addressee + '，' + list[i].Phone + '';
+                if (isselect == true) {
+                    html += '</a></label>';
+                }
+                html += '</p>';
+            }
+            callback(html, true);
+        } else {
+            callback('<p>没有收货地址，<a class="font_red_gou" href="/myshop/address" target="_blank">前往添加</a></p>', false);
+        }
+    });
+}
+
+//物流信息
+function expressTrace(orderstype, ordersid, callback) {
+    xh.get("Express/GetExpressTraces", { "orderstype": orderstype, "ordersid": ordersid }, function (list) {
+        if (callback != null && $.isFunction(callback)) {
+            callback(list);
+        }        
+    })
+}
