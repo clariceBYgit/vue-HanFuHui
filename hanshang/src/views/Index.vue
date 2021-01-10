@@ -388,13 +388,13 @@
   </div>
 		<!-- 附加导航（affix）,用来点亮各楼层的开关 -->
 	<div class="affix" id="fl">
-		<a href="#f1">本周热卖</a>
-		<a href="#f2">汉服女装</a>
-		<a href="#f3">汉服男装</a>
-		<a href="#f4">汉元素</a>
-		<a href="#f5">周边配饰</a>
-		<a href="#f5"></a>
-		<a href="#f5"></a>
+		<a id='a1' href="javascript:;">本周热卖</a>
+		<a id='a2' href="javascript:;">汉服女装</a>
+		<a id='a3' href="javascript:;">汉服男装</a>
+		<a id='a4' href="javascript:;">汉元素</a>
+		<a id='a5' href="javascript:;">周边配饰</a>
+		<a id='a' href="javascript:;"></a>
+		<a id='a' href="javascript:;"></a>
 		
 	</div>
 
@@ -403,19 +403,26 @@
   </div>
 </template>
 <script>
-
-// import global from '../components/common.vue';
+import { getCarousel_items } from '../requests'
 export default {
 	data(){
 		return{
+			// sale_titles:['本周热卖','汉服女装','汉服男装','汉元素','周边配饰']
+			Carousel_items:[]
 		}
 	},
   mounted(){ 
    this.onload();
+   this.Carousel()
 	},
   beforeDestroy(){
 	},
   methods:{
+	// 获取轮播图
+	Carousel(){
+	 getCarousel_items()
+	}
+	  ,
 		onload(){
 		//  var scrollTop=0;
  		window.addEventListener('scroll',function(){
@@ -441,20 +448,39 @@ export default {
 			var sale_titles = document.querySelectorAll('.sale_title');
 			// 获取类表
 			var asides = document.querySelectorAll('.affix a');
-			console.log(asides)
+			// console.log(asides)  //类数组对象
 			var num = 0
 			for( var i =0 ;i<sale_titles.length ; i++ ){
 				if(window.pageYOffset >= sale_titles[i].offsetTop-70){
 					num = i
 				}
+				if(	asides[i]){
 					asides[i].className = ''
 				}
+				}
+				if(	asides[num]){
 					asides[num].className = 'active'
-
-			
+				}
+			// 点击滚动 解决这个问题需要使用闭包（内层函数被外层函数包裹，同时使用者外层函数的变量）或者使用let
+			for(let i = 0;i<sale_titles.length; i++ ){
+				asides[i].onclick =function(){
+					// 遍历过程中 仅将事件处理函数赋值给某一个按钮的onclick属性，保存起来，而不是调用函数，所以，不会读取函数中的内容，也不会读取i
+					   for(var i=0;i<asides.length;i++){
+						if(asides[i].className=='active'){
+							asides[i].className=''
+						}
+						this.className='active';
+						var a = this.id.slice(1)
+						$("html,body").animate({
+                            scrollTop: sale_titles[a-1].offsetTop
+                            }, 300);
+						}
+				}
+			}
 
 		 })
 			//
+
 		}
 		,
     toTop(){
@@ -482,6 +508,8 @@ export default {
 			})
 		 
 		},
+	
+
     
 	}
 	
@@ -549,9 +577,15 @@ export default {
 		text-decoration:none;
 	} */
 /*宝贝图片的动画 */
+.img_position{
+	position: relative;
+}
 .img_position:hover{
 	transition: all 1s;
 	transform: scale(1.1);
+	box-shadow: 0 10px 15px 5px #cccccc;
+	top:-10px
+
 }
 /*返回顶部的按钮*/
 .backTop{

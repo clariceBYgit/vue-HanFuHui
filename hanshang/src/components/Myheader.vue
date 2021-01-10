@@ -28,25 +28,19 @@
 					<div class="left">
 						<ul class="nav">
 							<li class="nav-item">
-								<!-- <a class="nav-link nav_a1" href="javascript:;">首页</a> -->
-								<router-link to="/index">首页</router-link>
+								<router-link to="/">首页</router-link>
 							</li>
 							<li class="nav-item">
 								<router-link to="/details">萌物库</router-link>
-								<!-- <a class="nav-link" href="javascript:;">萌物库</a> -->
 							</li>
 							<li class="nav-item">
 								<router-link to="/brands">品牌馆</router-link>
-								<!-- <a class="nav-link" href="javascript:;">品牌馆</a> -->
 							</li>
 						</ul>	
 						</div>
 						<div class="right">					
-								<router-link class="add" to="/add">
+								<router-link to='/add' class="add" >
 								<img src="../../public/img/nav-pic.png" alt="">店家入驻</router-link>
-							<!-- <a class="add" href="javascript:;">
-								<img src="../../public/img/nav-pic.png" alt="">店家入驻
-							</a>		 -->
 						</div>
 				</div>
 		</div>
@@ -55,11 +49,27 @@
 </template>
 <script>
 export default {
-  methods:{
-	
-		// login(){
-		// 	this.$router.push('/login')
-		// }
+	data(){
+		return{}
+	},
+	mounted(){
+		this.getRouter()
+	},
+   	methods:{
+		//    获取路由
+		getRouter(){
+			// console.log(location.hash)   //得到  /  /index
+			// 当前的hash值 #/  #/index
+			var selectItem = location.hash
+			var items = document.querySelectorAll('.nav a')
+			// console.log(items[0].hash)
+			for(let i = 0; i<items.length; i++){
+				if(items[i].hash === selectItem){
+					items[i].className = 'active'
+				}
+			}
+		}
+		
 	}
 }
 </script>
@@ -84,8 +94,6 @@ export default {
 .logo{margin-top:15px;}
 .logo h2{color: #fff;
 	font:32px 华文行楷;
-	margin: 13px 26px 0px 0px;
-
 }
 .logo_p1{font:18px normal;
 	margin: 20px 25px 0px 12px;
@@ -169,6 +177,9 @@ export default {
 .left,.add:hover{
   color:#ff4466;
 }
-
+.active{
+	border-bottom:3px solid #ff4466;
+	
+}
 
 </style>

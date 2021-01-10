@@ -6,7 +6,7 @@
       <br>
       <p>可能是因为你的链接网址有误，或网址已失效</p>
       <br>
-      <router-link to="/index">
+      <router-link to="/">
        回到汉裳首页 -->
       </router-link>
     </div>
