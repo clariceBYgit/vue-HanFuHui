@@ -5,5 +5,5 @@ const server = axios.create({
 
 // 获取首页轮播图列表
 export const getCarousel_items = () => {
-    return server.get('//Poster/GetPosterInfoListForCode?code=gou_banner&count=4')
+    return server.get('https://api5.hanfugou.com/Poster/GetPosterInfoListForCode?code=gou_banner&count=4')
 }

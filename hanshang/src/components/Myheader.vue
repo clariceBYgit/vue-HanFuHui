@@ -9,15 +9,12 @@
                 <p class="logo_p2">圆你所想，正品原创汉服</p>
             </div>
             <div class="reg_login">
-                <!-- <a @click="login" href="javascript:;">注册</a> -->
 								<router-link to="/login">注册</router-link>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
-                <!-- <a @click="login" href="javascript:;">登录</a> -->
 								<router-link to="/login">登录</router-link>
             </div>
             <div class="search_fr">
                 <input type="text" name="" placeholder="请输入您要找的商品或者店铺">
-								<!-- <router-link class="search-icon" to="/details"></router-link> -->
                 <a href="javascript:;"></a>
             </div>
         </div>   
@@ -66,6 +63,9 @@ export default {
 			for(let i = 0; i<items.length; i++){
 				if(items[i].hash === selectItem){
 					items[i].className = 'active'
+				}
+				if(selectItem == '#/' || selectItem == '#/index'){
+					items[0].className = 'active'
 				}
 			}
 		}
@@ -126,7 +126,6 @@ export default {
 .search_fr>input::-webkit-input-placeholder{
 	color:#ffb3bf; 
 }
-/* #nav_a~a:hover,#nav_a,a{text-decoration:none;} */
 
 
 .search_fr a{
@@ -170,7 +169,6 @@ export default {
 
 .nav-item>a:hover{
 
-	/* color:#ff4466; */
 	border-bottom:3px solid #ff4466;
 	
 }
@@ -178,6 +176,8 @@ export default {
   color:#ff4466;
 }
 .active{
+	color:#ff4466;
+
 	border-bottom:3px solid #ff4466;
 	
 }
