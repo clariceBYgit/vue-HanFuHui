@@ -1,29 +1,20 @@
-# hanshang
+vue项目
 
-## Project setup
-```
-npm install
-```
+使用第三方库 ant design  样式是使用的less
+npm i ant-design-vue -S
+<!--安装按需引入插件-->
+npm i -D less less-loader
+npm i babel-plugin-import -D
+<!-- vue-cli 3中的配置 babel-plugin-import -->
+<!-- babel.config.js -->
+ module.exports = {
+  presets: ["@vue/app"],
++  plugins: [
++    [
++      "import",
++      { libraryName: "ant-design-vue", libraryDirectory: "es", style: 'css' }
++    ]
++  ]
+};
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Run your tests
-```
-npm run test
-```
-
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+小功能包含：楼层点亮，返回顶部
