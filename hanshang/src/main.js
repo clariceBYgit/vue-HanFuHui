@@ -10,9 +10,10 @@ import Myfooter from "./components/Myfooter"
 // import Myreg from "./components/Myreg"
 import Lookforward from "./components/Lookforward"
 
-import { Button } from 'ant-design-vue';
+import { Button,Spin } from 'ant-design-vue';
 
 Vue.component(Button.name, Button);
+Vue.component(Spin.name, Spin);
 Vue.component('myheader',Myheader);
 Vue.component('myfooter',Myfooter);
 // Vue.component('mylogin',Mylogin);

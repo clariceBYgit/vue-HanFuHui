@@ -1,7 +1,10 @@
 <template>
   <div class="page-bg">
     <myheader></myheader>
-    <div class="nav2">
+   
+    <a-spin class="load-icon" v-if="loading == true" size='large' :spinning="loading" />
+    <div  v-else>
+      <div  class="nav2">
       <!-- 轮播图-->
       <div id="lunbo" class="carousel" data-ride="carousel">
         <div class="carousel-inner">
@@ -34,14 +37,14 @@
     <div class="host_sale">
       <!--本周热卖 		 -->
       <div v-for="(item, index) in ProductListPublicForHot" :key="index">
-        <a id="item.ID" PostageID="item.PostageID" href=""
+        <router-link to="/product/+'ID'" ID="item.ID" PostageID="item.PostageID" href=""
           ><img class="img_position" :src="item.FaceSrc" alt=""
-        /></a>
+        /></router-link>
         <p class="price">
           <i>￥</i>
           {{ item.Price }}
         </p>
-        <a id="item.ID" PostageID="item.PostageID" href="">{{ item.Name }}</a>
+        <router-link to='/product' id="item.ID" PostageID="item.PostageID" href="">{{ item.Name }}</router-link>
       </div>
     </div>
 
@@ -52,7 +55,7 @@
         v-for="(item, index) in ProductListPublicForDefault.girl"
         :key="index"
       >
-        <a id="item.ID" PostageID="item.PostageID" href=""
+        <a ID="item.ID" PostageID="item.PostageID" href=""
           ><img class="img_position" :src="item.FaceSrc" alt=""
         /></a>
         <p class="price">
@@ -131,6 +134,8 @@
       <a id="a" href="javascript:;"></a>
     </div>
 
+    </div>
+      
     <myfooter></myfooter>
   </div>
 </template>
@@ -147,6 +152,7 @@ export default {
       Carousel_items: [],
       ProductListPublicForHot: [],
       ProductListPublicForDefault: [],
+      loading:false,
     };
   },
   mounted() {
@@ -157,18 +163,18 @@ export default {
   methods: {
     // 获取页面信息
     getDatas() {
+     
       getCarousel_items()
         // 获取轮播图片
         .then((res) => {
           this.Carousel_items = res.data.Data;
-          // console.log(this.Carousel_items)
         })
         .catch((err) => console.log(err));
       // 获取本周热卖
       getProductListPublicForHot()
         .then((res) => {
           this.ProductListPublicForHot = res.data.Data;
-          // console.log(this.ProductListPublicForHot)
+          console.log(this.ProductListPublicForHot)
         })
         .catch((err) => console.log(err));
       // 获取其他的楼层数据
@@ -178,14 +184,21 @@ export default {
           // console.log(this.ProductListPublicForDefault)
         })
         .catch((err) => console.log(err));
+    
+      //  if(this.Carousel_items.length> 0){
+      //    this.loading = false
+      //    console.log(this.Carousel_items)
+      //  }
+    
+
     },
     onload() {
       //  var scrollTop=0;
       window.addEventListener("scroll", function () {
         this.scrollTop =
           document.body.scrollTop || document.documentElement.scrollTop;
-        var top = document.getElementById("top");
-        var fl = document.getElementById("fl");
+          var top = document.getElementById('top')
+          var fl = document.getElementById('fl')
         // console.log(top,fl)
         // 当滚动条位置滚动到500+是 导航楼层和返回顶部按钮出现
         if (this.scrollTop >= 500) {
@@ -217,34 +230,27 @@ export default {
           asides[num].className = "active";
         }
         // 点击加active 解决这个问题需要使用闭包（内层函数被外层函数包裹，同时使用者外层函数的变量）或者使用let
-        for (let i = 0; i < sale_titles.length; i++) {
+        for (var i = 0; i < sale_titles.length; i++) {
+          asides[i].index = i;
           asides[i].onclick = function () {
             // 遍历过程中 仅将事件处理函数赋值给某一个按钮的onclick属性，保存起来，而不是调用函数，所以，不会读取函数中的内容，也不会读取i
+            // 此时使用排他思想
             for (var i = 0; i < asides.length; i++) {
-              if (asides[i].className == "active") {
                 asides[i].className = "";
-              }
+            }
               this.className = "active";
-            }
+              // 点击滚动
+             var a = sale_titles[this.index].id.slice(1)
+             $('html,body').animate(
+               {
+                 scrollTop: sale_titles[a - 1].offsetTop,
+               },
+               200
+             )
           };
         }
-        // 点击滚动
-        for (let i = 0; i < sale_titles.length; i++) {
-          asides[i].onclick = function () {
-            // 遍历过程中 仅将事件处理函数赋值给某一个按钮的onclick属性，保存起来，而不是调用函数，所以，不会读取函数中的内容，也不会读取i
-            for (var i = 0; i < asides.length; i++) {
-              var a = this.id.slice(1);
-              $("html,body").animate(
-                {
-                  scrollTop: sale_titles[a - 1].offsetTop,
-                },
-                200
-              );
-            }
-          };
-        }
+
       });
-      //
     },
     toTop() {
       //总距离
@@ -274,7 +280,10 @@ export default {
 </script>
 
 <style scoped>
-
+.load-icon{
+  display: block;
+  margin: 100px auto;
+}
 .nav2 {
   width: 1100px;
   height: 470px;
