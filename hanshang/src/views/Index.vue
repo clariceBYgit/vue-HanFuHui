@@ -14,7 +14,7 @@
             v-for="(item, index) in Carousel_items"
             :key="index"
           >
-            <a :href="item.Link">
+             <a :href="item.Link">
               <img :src="item.ImgSrc" :id="item.ID" alt="" />
             </a>
           </div>
@@ -37,14 +37,14 @@
     <div class="host_sale">
       <!--本周热卖 		 -->
       <div v-for="(item, index) in ProductListPublicForHot" :key="index">
-        <router-link to="/product/+'ID'" ID="item.ID" PostageID="item.PostageID" href=""
+        <router-link :to="{path:`/product/${item.ID}`}" PostageID="item.PostageID" href=""
           ><img class="img_position" :src="item.FaceSrc" alt=""
         /></router-link>
         <p class="price">
           <i>￥</i>
           {{ item.Price }}
         </p>
-        <router-link to='/product' id="item.ID" PostageID="item.PostageID" href="">{{ item.Name }}</router-link>
+        <router-link :to="{path:`/product/:${item.ID}`,params:{pid:item.ID,shop:item.shop}}" PostageID="item.PostageID" href="">{{ item.Name }}</router-link>
       </div>
     </div>
 
@@ -121,7 +121,8 @@
 
     <!-- 返回顶部按钮 -->
     <div class="backTop" id="top">
-      <div @click="toTop"></div>
+      <!-- <div @click="toTop"></div> -->
+      <div @click="goTop"></div>
     </div>
     <!-- 附加导航（affix）,用来点亮各楼层的开关 -->
     <div class="affix" id="fl">
@@ -174,7 +175,7 @@ export default {
       getProductListPublicForHot()
         .then((res) => {
           this.ProductListPublicForHot = res.data.Data;
-          console.log(this.ProductListPublicForHot)
+          // console.log(this.ProductListPublicForHot)
         })
         .catch((err) => console.log(err));
       // 获取其他的楼层数据
@@ -252,6 +253,7 @@ export default {
 
       });
     },
+    // 返回顶部的方式一
     toTop() {
       //总距离
       this.scrollTop =
@@ -275,6 +277,10 @@ export default {
         }
       }, interval);
     },
+    // 返回顶部最简单的方式二
+    goTop(){
+      document.body.scrollIntoView({behavior:"smooth"})
+    }
   },
 };
 </script>

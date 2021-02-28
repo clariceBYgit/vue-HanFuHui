@@ -140,6 +140,12 @@
   </div>
 </template>
 <script>
+// 引入获取商品的请求
+import {
+  getProductByPid,
+  getRecommendedProduct,
+  getProductCommentByPid
+} from '../requests'
 export default {
   data() {
     return {
@@ -160,8 +166,23 @@ export default {
         require("../../public/img/d35093fc31f24589b1202492f581bb41.jpg_820.jpg"),
         require("../../public/img/01538989da494135b09270d1a68a6c50.jpg_820.jpg"),
       ],
+      productid:null
+      
     };
   },
+  mounted(){
+    // 获取到路由传过来的id 获取当前评论数据
+    let pid = this.$route.params.pid
+    // 获取当前页面的推荐商品数据
+    getRecommendedProduct(pid)
+    .then( res => console.log(res.data.Data))
+    .catch(err => console.log(err))
+    //  获取当前评论数据
+    getProductCommentByPid(pid)
+    .then( res => console.log(res.data.Data))
+    .catch( err => console.log(err))
+    // console.log(pid)
+  }
 };
 </script>
 <style scoped>

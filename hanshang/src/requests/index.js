@@ -14,3 +14,18 @@ export const getProductListPublicForHot = () => {
 export const getProductListPublicForDefault = () => {
     return server.get('/Product/GetProductListPublicForDefault?count=8')
 }
+
+// 根据pid获取单个商品的信息
+export const getProductByPid = (pid) =>{
+    return server.get(`/Product/GetProductListPublicForRelevant?ids=${pid}&count=15`)
+}
+
+// 获取当前页面的推荐商品数据
+export const getRecommendedProduct = (pid) =>{
+    return server.get(`/Product/GetProductListPublicForRelevant?ids=${pid}&count=15`)
+}
+
+// 根据pid获取单个商品的评论信息
+export const getProductCommentByPid = (pid) =>{
+    return server.get(`/ProductComment/GetProductCommentList?role=6&productid=${pid}`)
+}
