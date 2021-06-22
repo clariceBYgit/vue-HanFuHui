@@ -89,9 +89,9 @@
         <div class="tab-content">
           <!-- 图片介绍 -->
           <div id="tab1" class="tab-pane active show">
-            <div v-for="(item, i) of imgs" :key="i">
+            <!-- <div v-for="(item, i) of imgs" :key="i">
               <img :src="item" />
-            </div>
+            </div> -->
           </div>
           <!-- 宝贝评论 -->
           <div id="tab2" class="tab-pane">
@@ -150,22 +150,7 @@ export default {
   data() {
     return {
       sizes: ["S", "XS", "M", "L", "XL"],
-      imgs: [
-        // require("../../public/img/01.jpg"),
-        require("../../public/img/b5ab5378980e4a8f8ea15d2e06b411b5.jpg_820.jpg"),
-        require("../../public/img/7cdf887d5688486d8a0dd5c9597b16c8.jpg_820.jpg"),
-        require("../../public/img/c0083ab1312c45daa97a228f1245948c.jpg_820.jpg"),
-        require("../../public/img/5f08d3ff3a254008a00b04f645ddbc4f.jpg_820.jpg"),
-        require("../../public/img/cf8ad53fdd254ad29594feb34ec1e856.jpg_820.jpg"),
-        require("../../public/img/a7febc4dad3b43a4911aa4d9cb1a7663.jpg_820.jpg"),
-        require("../../public/img/52ee92f361484d84ac1eeaf2541053de.jpg_820.jpg"),
-        require("../../public/img/b5ab5378980e4a8f8ea15d2e06b411b5.jpg_820.jpg"),
-        require("../../public/img/5d7a1065821546a7884af793b700c4c8.jpg_820.jpg"),
-        require("../../public/img/a5db397d43ef4f659ba52d5aeb5bd059.jpg_820.jpg"),
-        require("../../public/img/0f50ffeb4e9040bea0b00322620d5ccb.jpg_820.jpg"),
-        require("../../public/img/d35093fc31f24589b1202492f581bb41.jpg_820.jpg"),
-        require("../../public/img/01538989da494135b09270d1a68a6c50.jpg_820.jpg"),
-      ],
+      imgs: [],
       productid:null
       
     };
@@ -173,6 +158,10 @@ export default {
   mounted(){
     // 获取到路由传过来的id 获取当前评论数据
     let pid = this.$route.params.pid
+    // 获取当前页面的商品详情
+    getProductByPid(pid)
+    .then( res => console.log(res))
+    .catch( err => console.log(err))
     // 获取当前页面的推荐商品数据
     getRecommendedProduct(pid)
     .then( res => console.log(res.data.Data))
@@ -181,7 +170,7 @@ export default {
     getProductCommentByPid(pid)
     .then( res => console.log(res.data.Data))
     .catch( err => console.log(err))
-    // console.log(pid)
+    console.log(pid)
   }
 };
 </script>

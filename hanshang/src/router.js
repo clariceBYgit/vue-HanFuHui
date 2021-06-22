@@ -19,7 +19,7 @@ export default new Router({
     {path:'/login',component:Login},
     {path:'/register',component:Register},
     {path:'/details',component:Details},
-    {path:'/product/:id',component:Product},
+    {path:'/product/:pid',component:Product},
     {path:'/brands',component:Brands},
     {path:'/add',component:Add},
     {path:'/*',component:NotFound},

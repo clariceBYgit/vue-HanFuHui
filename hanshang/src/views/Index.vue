@@ -149,7 +149,6 @@ import {
 export default {
   data() {
     return {
-      // sale_titles:['本周热卖','汉服女装','汉服男装','汉元素','周边配饰']
       Carousel_items: [],
       ProductListPublicForHot: [],
       ProductListPublicForDefault: [],

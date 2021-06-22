@@ -17,7 +17,7 @@ export const getProductListPublicForDefault = () => {
 
 // 根据pid获取单个商品的信息
 export const getProductByPid = (pid) =>{
-    return server.get(`/Product/GetProductListPublicForRelevant?ids=${pid}&count=15`)
+    return server.get(`/System/GetTowCodeForObject?objecttype=product&objectid=${pid}`)
 }
 
 // 获取当前页面的推荐商品数据
